@@ -31,6 +31,7 @@ from abides_markets.utils import generate_latency_model
 def build_config(
     seed=int(datetime.now().timestamp() * 1_000_000) % (2**32 - 1),
     date="20210205",
+        # ta nazwa jest mocno myląca, bo to wygląda na czas/timedeltę a nie godzinę zakończenia
     end_time="10:00:00",
     stdout_log_level="INFO",
     ticker="ABM",
@@ -115,6 +116,7 @@ def build_config(
     DATE = int(pd.to_datetime(date).to_datetime64())
     MKT_OPEN = DATE + str_to_ns("09:30:00")
     MKT_CLOSE = DATE + str_to_ns(end_time)
+
     # These times needed for distribution of arrival times of Noise Agents
     NOISE_MKT_OPEN = MKT_OPEN - str_to_ns("00:30:00")
     NOISE_MKT_CLOSE = DATE + str_to_ns("16:00:00")
@@ -129,13 +131,15 @@ def build_config(
             "megashock_lambda_a": megashock_lambda_a,
             "megashock_mean": megashock_mean,
             "megashock_var": megashock_var,
+            #TODO: czy to jest mi niezbędne, dlaczego u innych może to działać? inna wersja bibliotek?
             "random_state": np.random.RandomState(
-                seed=np.random.randint(low=0, high=2**32)
+                seed=np.random.randint(low=0, high=2**32, dtype=np.int64)
             ),
         }
     }
 
     oracle = SparseMeanRevertingOracle(MKT_OPEN, NOISE_MKT_CLOSE, symbols)
+    #TODO: chyba tu możemy zdefinować drugą wyrocznię i części agentów podać jedną, części drugą
 
     # Agent configuration
     agent_count, agents, agent_types = 0, [], []
