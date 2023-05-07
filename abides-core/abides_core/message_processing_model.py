@@ -44,16 +44,22 @@ class VotingProcessingModel(MessageProcessingModel):
         self.messages.put((current_time, Message))
 
     def on_decision(self) -> Message:
-        sample = []
+        sample_size = 0
         message_occurencies = {}
+        message_passed = None
 
-        while len(sample) <= self.max_sample_size:
+        while sample_size <= self.max_sample_size:
+            # ściągamy ostatnią wiadomość z kolejki i określamy jej typ
             message = self.messages_queue.get()
             message_type = message.type()
+
+            # dodajemy wystąpienie rodzaju wiadomości do słownika
             if message_type not in message_occurencies.keys():
                 message_occurencies[message_type] = 1
             else:
                 message_occurencies[message_type] = message_occurencies[message_type] + 1
-            sample.append(message)
-        return max(sample, key=sample.get)
 
+            # jeśli wiadomość jest ostatnią wiadomością najcześciej występującego typu, zapisujemy ją jako wiadomość do przekazania
+            if max(message_occurencies, key=message_occurencies.get) == message_type:
+                message_passed = message
+        return message_passed

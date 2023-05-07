@@ -30,3 +30,19 @@ class CommunicativeAgent(Agent):
         # pzypadek gdy lista pusta
         for contact_id, delay in zip(self.contacts, self.delays):
             self.send_message(recipient_id=contact_id, message=message, delay=delay)
+
+    def delete_contact(self, contact_id: int) -> None:
+        contact_index = self.contacts.index(contact_id)
+        self.contacts.pop(contact_index)
+        self.contacts.pop(contact_index)
+
+    def add_contact(self, contact_id: int, delay: Optional[int] = 0) -> None:
+        self.contacts.append(contact_id)
+        self.delays.append(delay)
+
+    def update_contacts(self, new_contact_list: List[int], delays_list: List[int] = None) -> None:
+        self.contacts = new_contact_list
+        if delays_list is None:
+            self.delays = [0] * len(self.contacts)
+        else:
+            self.delays = delays_list
