@@ -37,7 +37,7 @@ class Kernel:
         custom_properties: Different attributes that can be added to the simulation
             (e.g., the oracle).
     """
-
+    #uwaga dziura: id agenta jest równocześnie jego indeksem we wszystkich tablicach
     def __init__(
         self,
         agents: List[Agent],

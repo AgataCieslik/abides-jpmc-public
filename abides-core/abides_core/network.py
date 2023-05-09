@@ -1,6 +1,7 @@
 from .communicative_agent import CommunicativeAgent
 from abc import ABC, abstractmethod
-from typing import List, Dict, Type, Self
+from typing import List, Dict, Type, Generator
+from typing_extensions import Self
 
 
 # czy klasa z abstrakcyjnymi metodami musi dziedziczyć po ABC? chyba nie?
@@ -15,11 +16,12 @@ class Network:
         pass
 
     @classmethod
-    def construct(cls, agent_types: Dict[Type[CommunicativeAgent], int]) -> Self:
+    def construct(cls, agent_types: Dict[Type[CommunicativeAgent], int],
+                  id_generator: Generator[int, None, None]) -> Self:
         agents_in_net = []
         for agent_type, agent_count in agent_types.items():
             for i in range(agent_count):
-                agents_in_net.append(agent_type())
+                agents_in_net.append(agent_type(id=next(id_generator)))
         return cls.construct_from_agent_list(agents_in_net)
 
     def get_agent_list(self) -> List[CommunicativeAgent]:
@@ -49,9 +51,10 @@ class CompleteGraph(Network):
     def construct_from_agent_list(cls, agent_list: List[CommunicativeAgent]) -> Self:
         agents_ids = [agent.id for agent in iter(agent_list)]
         for agent in iter(agent_list):
-            new_contacts_list = [agent_id for agent_id in iter(agents_ids) if agent_id != agent.id]
-            agent.update_contacts(new_contacts_list=new_contacts_list)
+            new_contact_list = [agent_id for agent_id in iter(agents_ids) if agent_id != agent.id]
+            agent.update_contacts(new_contact_list=new_contact_list)
         return cls(agent_list)
+
 
 # czy właściwie tego potrzebuję? właściwie to jakiej struktury potrzebuję?
 class Ring(Network):

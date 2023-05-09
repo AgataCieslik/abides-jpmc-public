@@ -20,7 +20,7 @@ class CommunicativeAgent(Agent):
     ) -> None:
         super().__init__(id, name, type, random_state, log_events, log_to_file)
         self.contacts = contacts
-        if delays is None:
+        if (delays is None) and (contacts is not None):
             self.delays = [0] * len(self.contacts)
         else:
             self.delays = delays
