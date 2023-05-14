@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 from message import Message
-from typing import Optional
+from typing import Optional, Type, List, Tuple
 from . import NanosecondTime
 import queue
 
+
+# MessageProcessing czy może Information Processing?
 
 class MessageProcessingModel(ABC):
     @abstractmethod
@@ -50,7 +52,7 @@ class VotingProcessingModel(MessageProcessingModel):
 
         while sample_size <= self.max_sample_size:
             # ściągamy ostatnią wiadomość z kolejki i określamy jej typ
-            message = self.messages_queue.get()
+            delivery_time, message = self.messages_queue.get()
             message_type = message.type()
 
             # dodajemy wystąpienie rodzaju wiadomości do słownika
@@ -63,3 +65,73 @@ class VotingProcessingModel(MessageProcessingModel):
             if max(message_occurencies, key=message_occurencies.get) == message_type:
                 message_passed = message
         return message_passed
+
+
+class ProbabilisticProcessing(MessageProcessingModel):
+    # dodałam dziedzicznie po ABC, by nie można było utworzyć instancji danej klasy - czy to poprawne myślenie?
+    # jako prior belief bierzemy parametry rozkładu beta: alfa i beta (dla alfa = beta =1 dostajemy rozklad jednostajny)
+    def __init__(self, message_types: List[Type[Message]], contacts: List[int],
+                 prior_belief: Tuple[float, float] = (0, 0)) -> None:
+        self.messages_queue = queue.PriorityQueue[Message] = queue.PriorityQueue()
+        self.decisions_count = 0
+        self.contacts = contacts
+        # rozkład prawdopodobieństwa zmiennej prawdomówności/uczciwości
+        self.alpha, self.beta = prior_belief
+        self.true_messages_count = {i: 0 for i in range(len(contacts))}
+        self.messages_to_validate = []
+
+    def on_receive(self, current_time: NanosecondTime, message: Message, sender_id: int) -> None:
+        self.messages.put((current_time, (sender_id, Message)))
+
+    def validate(self, truth: Type[Message]) -> None:
+        for sender_id, message in iter(self.messages_to_validate):
+            if isinstance(message, truth):
+                self.true_messages_count += 1
+        self.messages_to_validate = []
+
+    # może jako property?
+    def trust(self) -> List[float]:
+        return {agent_id: (true_responses + self.alpha - 1) / (self.decisions_count + self.alpha + self.beta - 2) for
+                agent_id, true_responses in self.true_messages_count.items()}
+
+
+class TrustWeightedProcessing(ProbabilisticProcessing):
+    def on_decision(self) -> Message:
+        message_occurencies = {}
+        message_passed = None
+        current_trust = self.trust()
+
+        while not self.message_queue.empty():
+            # ściągamy ostatnią wiadomość z kolejki i określamy jej typ
+            delivery_time, message_with_sender = self.messages_queue.get()
+            sender_id, message = message_with_sender
+            message_type = message.type()
+
+            # dodajemy wystąpienie rodzaju wiadomości * zaufanie do nadawcy do słownika
+            if message_type not in message_occurencies.keys():
+                message_occurencies[message_type] = 1 * current_trust[sender_id]
+            else:
+                message_occurencies[message_type] = message_occurencies[message_type] + 1 * current_trust[sender_id]
+
+            # jeśli wiadomość jest ostatnią wiadomością najcześciej występującego typu, zapisujemy ją jako wiadomość do przekazania
+            if max(message_occurencies, key=message_occurencies.get) == message_type:
+                message_passed = message
+        return message_passed
+
+
+class TrustedSourceProcessing(ProbabilisticProcessing):
+    def on_decision(self) -> Message:
+        messages_by_sender = {}
+        current_trust = self.trust()
+        trusted_sender = max(current_trust, key=current_trust.get)
+
+        while not self.message_queue.empty():
+            delivery_time, message_with_sender = self.messages_queue.get()
+            sender_id, message = message_with_sender
+            if sender_id == trusted_sender:
+                return message
+            messages_by_sender[sender_id] = message
+        trust_in_sample = {sender: sender_trust for sender, sender_trust in current_trust.items() if
+                           sender in messages_by_sender.keys()}
+        trusted_sender = max(trust_in_sample, key=trust_in_sample.get)
+        return messages_by_sender[trusted_sender]
