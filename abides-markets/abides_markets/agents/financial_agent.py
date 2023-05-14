@@ -2,12 +2,12 @@ from typing import List, Optional, Union
 
 import numpy as np
 
-from abides_core import Agent
+from abides_core import Agent, CommunicativeAgent
 
 from ..utils import dollarize
 
 
-class FinancialAgent(Agent):
+class FinancialAgent(CommunicativeAgent):
     """
     The FinancialAgent class contains attributes and methods that should be available to
     all agent types (traders, exchanges, etc) in a financial market simulation.
