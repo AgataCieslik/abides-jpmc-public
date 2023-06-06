@@ -10,7 +10,6 @@ from abides_core import NanosecondTime
 
 from .oracle import Oracle
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -31,10 +30,10 @@ class MeanRevertingOracle(Oracle):
     as seconds or minutes."""
 
     def __init__(
-        self,
-        mkt_open: NanosecondTime,
-        mkt_close: NanosecondTime,
-        symbols: Dict[str, Dict[str, Any]],
+            self,
+            mkt_open: NanosecondTime,
+            mkt_close: NanosecondTime,
+            symbols: Dict[str, Dict[str, Any]],
     ) -> None:
         # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
         # inner keys: r_bar, kappa, sigma_s.
@@ -42,7 +41,7 @@ class MeanRevertingOracle(Oracle):
         self.mkt_close: NanosecondTime = mkt_close
         self.symbols: Dict[str, Dict[str, Any]] = symbols
 
-        # The dictionary r holds the fundamenal value series for each symbol.
+        # The dictionary r holds the fundamental value series for each symbol.
         self.r: Dict[str, pd.Series] = {}
 
         then = dt.datetime.now()
@@ -60,12 +59,12 @@ class MeanRevertingOracle(Oracle):
         logger.debug("MeanRevertingOracle initialization took {}", now - then)
 
     def generate_fundamental_value_series(
-        self, symbol: str, r_bar: int, kappa: float, sigma_s: float
+            self, symbol: str, r_bar: int, kappa: float, sigma_s: float
     ) -> pd.Series:
         """Generates the fundamental value series for a single stock symbol.
 
         Arguments:
-            symbol: The symbold to calculate the fundamental value series for.
+            symbol: The symbol to calculate the fundamental value series for.
             r_bar: The mean fundamental value.
             kappa: The mean reversion coefficient.
             sigma_s: The shock variance.  (Note: NOT STANDARD DEVIATION)
@@ -103,7 +102,7 @@ class MeanRevertingOracle(Oracle):
         return s.astype(int)
 
     def get_daily_open_price(
-        self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
+            self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
     ) -> int:
         """Return the daily open price for the symbol given.
 
@@ -126,11 +125,12 @@ class MeanRevertingOracle(Oracle):
         return open_price
 
     def observe_price(
-        self,
-        symbol: str,
-        current_time: NanosecondTime,
-        random_state: np.random.RandomState,
-        sigma_n: int = 1000,
+            self,
+            symbol: str,
+            current_time: NanosecondTime,
+            random_state: Optional[np.random.RandomState] = None,
+            sigma_n: int = 1000,
+            noisy: bool = True
     ) -> int:
         """Return a noisy observation of the current fundamental value.
 
@@ -152,6 +152,9 @@ class MeanRevertingOracle(Oracle):
             r_t = self.r[symbol].loc[self.mkt_close - 1]
         else:
             r_t = self.r[symbol].loc[current_time]
+
+        if not noisy:
+            return r_t
 
         # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:

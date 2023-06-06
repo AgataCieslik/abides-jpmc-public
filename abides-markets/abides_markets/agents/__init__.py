@@ -7,3 +7,5 @@ from .financial_agent import FinancialAgent
 from .noise_agent import NoiseAgent
 from .trading_agent import TradingAgent
 from .value_agent import ValueAgent
+from abides_markets.agents.network_agents.insider_agent import InsiderAgent
+from .network_agents import Friend, FalseFriend

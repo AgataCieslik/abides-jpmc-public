@@ -1,7 +1,7 @@
 import datetime as dt
 import logging
 from math import exp, sqrt
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ import pandas as pd
 from abides_core import NanosecondTime
 
 from .mean_reverting_oracle import MeanRevertingOracle
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +37,10 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
     """
 
     def __init__(
-        self,
-        mkt_open: NanosecondTime,
-        mkt_close: NanosecondTime,
-        symbols: Dict[str, Dict[str, Any]],
+            self,
+            mkt_open: NanosecondTime,
+            mkt_close: NanosecondTime,
+            symbols: Dict[str, Dict[str, Any]],
     ) -> None:
         # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
         # inner keys: r_bar, kappa, sigma_s.
@@ -101,7 +100,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         )
 
     def compute_fundamental_at_timestamp(
-        self, ts: NanosecondTime, v_adj, symbol: str, pt: NanosecondTime, pv
+            self, ts: NanosecondTime, v_adj, symbol: str, pt: NanosecondTime, pv
     ) -> int:
         """
         Arguments:
@@ -137,7 +136,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         # from the appropriate distribution of possible values.
         v = s["random_state"].normal(
             loc=mu + (pv - mu) * (exp(-gamma * d)),
-            scale=sqrt(((theta**2) / (2 * gamma)) * (1 - exp(-2 * gamma * d))),
+            scale=sqrt(((theta ** 2) / (2 * gamma)) * (1 - exp(-2 * gamma * d))),
         )
 
         # Apply the value adjustment that was passed in.
@@ -159,7 +158,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return v
 
     def advance_fundamental_value_series(
-        self, current_time: NanosecondTime, symbol: str
+            self, current_time: NanosecondTime, symbol: str
     ) -> int:
         """This method advances the fundamental value series for a single stock symbol,
         using the OU process.  It may proceed in several steps due to our periodic
@@ -221,7 +220,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return v
 
     def get_daily_open_price(
-        self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
+            self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
     ) -> int:
         """Return the daily open price for the symbol given.
 
@@ -246,11 +245,12 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return open_price
 
     def observe_price(
-        self,
-        symbol: str,
-        current_time: NanosecondTime,
-        random_state: np.random.RandomState,
-        sigma_n: int = 1000,
+            self,
+            symbol: str,
+            current_time: NanosecondTime,
+            random_state: Optional[np.random.RandomState] = None,
+            sigma_n: int = 1000,
+            noisy: bool = True
     ) -> int:
         """Return a noisy observation of the current fundamental value.
 
@@ -272,6 +272,9 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             r_t = self.advance_fundamental_value_series(self.mkt_close - 1, symbol)
         else:
             r_t = self.advance_fundamental_value_series(current_time, symbol)
+
+        if not noisy:
+            return r_t
 
         # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:

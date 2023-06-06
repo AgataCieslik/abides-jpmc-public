@@ -131,7 +131,7 @@ def build_config(
             "megashock_lambda_a": megashock_lambda_a,
             "megashock_mean": megashock_mean,
             "megashock_var": megashock_var,
-            #TODO: czy to jest mi niezbędne, dlaczego u innych może to działać? inna wersja bibliotek?
+            #TODO: dtype: czy to jest mi niezbędne, dlaczego u innych może to działać? inna wersja bibliotek?
             "random_state": np.random.RandomState(
                 seed=np.random.randint(low=0, high=2**32, dtype=np.int64)
             ),
@@ -139,7 +139,6 @@ def build_config(
     }
 
     oracle = SparseMeanRevertingOracle(MKT_OPEN, NOISE_MKT_CLOSE, symbols)
-    #TODO: chyba tu możemy zdefinować drugą wyrocznię i części agentów podać jedną, części drugą
 
     # Agent configuration
     agent_count, agents, agent_types = 0, [], []
