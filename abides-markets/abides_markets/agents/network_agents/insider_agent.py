@@ -10,10 +10,6 @@ from abides_markets.orders import Side
 
 # czy zagwarantować, że wyśle tylko jedno zlecenie? - nie trzeba
 # jak zagwarantować, że obudzi się we właściwym momencie?
-# może tak: rozszerzamy wyrocznię o metodę zwracającą informację o sygnale 'buy/hold/sell'
-# dla ścisłości - insider dostaje cynk, że cena pójdzie w góre lub w dół, ale nie wie dokładnie o ile
-# insider odpytuje wyrocznię i dostaje informację o sygnale
-# w momencie gdy otrzyma sygnał buy lub sell postępuje zgodnie z nim i przesyła dalej
 
 class InsiderAgent(TradingAgent):
     def __init__(self,
