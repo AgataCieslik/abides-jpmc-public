@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 
@@ -13,6 +13,7 @@ from .trading_agent import TradingAgent
 
 logger = logging.getLogger(__name__)
 
+# może tu też powinnam dopisać contacts i delays - pytanie, czy to nie zrypie później całej konfiguracji rmsc
 
 class NoiseAgent(TradingAgent):
     """
@@ -30,10 +31,12 @@ class NoiseAgent(TradingAgent):
         log_orders: bool = False,
         order_size_model: Optional[OrderSizeGenerator] = None,
         wakeup_time: Optional[NanosecondTime] = None,
+        contacts: Optional[List[int]] = None,
+        delays: Optional[List[int]] = None
     ) -> None:
 
         # Base class init.
-        super().__init__(id, name, type, random_state, starting_cash, log_orders)
+        super().__init__(id, name, type, random_state, starting_cash, log_orders, contacts, delays)
 
         self.wakeup_time: NanosecondTime = wakeup_time
 

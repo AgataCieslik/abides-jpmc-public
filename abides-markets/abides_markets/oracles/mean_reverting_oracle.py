@@ -129,8 +129,7 @@ class MeanRevertingOracle(Oracle):
             symbol: str,
             current_time: NanosecondTime,
             random_state: Optional[np.random.RandomState] = None,
-            sigma_n: int = 1000,
-            noisy: bool = True
+            sigma_n: int = 1000
     ) -> int:
         """Return a noisy observation of the current fundamental value.
 
@@ -152,9 +151,6 @@ class MeanRevertingOracle(Oracle):
             r_t = self.r[symbol].loc[self.mkt_close - 1]
         else:
             r_t = self.r[symbol].loc[current_time]
-
-        if not noisy:
-            return r_t
 
         # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:

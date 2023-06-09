@@ -1,2 +1,3 @@
-from .follower_agent import FollowerAgent, RegularFollowerAgent
-from .insider_agent import InsiderAgent
+from .follower_noise_agent import FollowerNoiseAgent
+from .follower_value_agent import FollowerValueAgent
+from .insider_value_agent import InsiderValueAgent

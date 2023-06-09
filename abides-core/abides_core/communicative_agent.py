@@ -51,3 +51,8 @@ class CommunicativeAgent(Agent):
             self.delays = [0] * len(self.contacts)
         else:
             self.delays = delays_list
+
+    def get_agent_delay(self, agent_id: int):
+        agent_ind = [i for i, id in enumerate(self.contacts) if id == agent_id][0]
+        return self.delays[agent_ind]
+

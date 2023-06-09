@@ -85,16 +85,13 @@ class DataOracle(Oracle):
             symbol: str,
             current_time: NanosecondTime,
             random_state: Optional[np.random.RandomState] = None,
-            sigma_n: int = 1000,
-            noisy=True
+            sigma_n: int = 1000
     ) -> int:
         if current_time >= self.mkt_close:
             r_t = self.r[symbol].loc[self.mkt_close - 1]
         else:
             r_t = self.r[symbol].loc[current_time]
 
-        if not noisy:
-            return r_t
             # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:
             obs = r_t

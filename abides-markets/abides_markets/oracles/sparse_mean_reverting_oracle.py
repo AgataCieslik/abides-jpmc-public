@@ -40,6 +40,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             self,
             mkt_open: NanosecondTime,
             mkt_close: NanosecondTime,
+            # w tym słowniku symbols określamy paramety megashocku - jak często i jak intensywnie do megashocków dochodzi
             symbols: Dict[str, Dict[str, Any]],
     ) -> None:
         # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
@@ -249,8 +250,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             symbol: str,
             current_time: NanosecondTime,
             random_state: Optional[np.random.RandomState] = None,
-            sigma_n: int = 1000,
-            noisy: bool = True
+            sigma_n: int = 1000
     ) -> int:
         """Return a noisy observation of the current fundamental value.
 
@@ -272,9 +272,6 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             r_t = self.advance_fundamental_value_series(self.mkt_close - 1, symbol)
         else:
             r_t = self.advance_fundamental_value_series(current_time, symbol)
-
-        if not noisy:
-            return r_t
 
         # Generate a noisy observation of fundamental value at the current time.
         if sigma_n == 0:
