@@ -142,7 +142,7 @@ class InsiderValueAgent(ValueAgent):
         if isinstance(message, QueryFinalValue):
             # when some FollowerValueAgent asks for fundamental value
             response = FinalValueResponse(symbol=self.symbol, obs_time=self.prev_obs_time, r_T=self.final_fundamental,
-                                                sigma_t=self.sigma_t)
+                                          sigma_t=self.sigma_t)
 
             delay = self.get_agent_delay(sender_id)
             self.send_message(recipient_id=sender_id, message=response, delay=delay)
@@ -155,6 +155,7 @@ class InsiderValueAgent(ValueAgent):
                     response = SellSignal(symbol=self.symbol)
                 delay = self.get_agent_delay(sender_id)
                 self.send_message(recipient_id=sender_id, message=response, delay=delay)
+            else:
+                self.send_message(recipient_id=sender_id, message=TradingSignal(symbol=self.symbol), delay=delay)
 
 # get wake frequency - nie ma potrzeby modyfikowania
-

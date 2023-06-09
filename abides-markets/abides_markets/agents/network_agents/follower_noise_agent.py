@@ -7,7 +7,7 @@ from ..noise_agent import NoiseAgent
 from abides_core import Message, NanosecondTime
 from ...messages.trading_signal import TradingSignal, BuySignal, SellSignal
 from ...generators import OrderSizeGenerator
-from ...messages.recommendations import QuerySideRecommendation
+from ...messages.recommendations import QuerySideRecommendation, QueryFinalValue, FinalValueResponse
 from ...messages.query import QuerySpreadResponseMsg
 from ...orders import Side
 from ..trading_agent import TradingAgent
@@ -40,8 +40,8 @@ class FollowerNoiseAgent(NoiseAgent):
         # Base class init.
         super().__init__(id, name, type, random_state, symbol, starting_cash, log_orders, order_size_model, wakeup_time,
                          contacts, delays)
-        self.last_recommendations: Dict[int, TradingSignal]= {}
-        self.final_recommendation: Optional[Side] = None
+        self.last_recommendations: Dict[int, TradingSignal] = {}
+        self.side = None
 
     def get_recommendations(self) -> None:
         message = QuerySideRecommendation(self.symbol)
@@ -61,6 +61,8 @@ class FollowerNoiseAgent(NoiseAgent):
 
         for sender, signal in self.last_recomendations.items():
             message_type = type(signal)
+            if message_type == 'TradingSignal':
+                continue
             if message_type not in message_occurencies.keys():
                 message_occurencies[message_type] = 1
             else:
@@ -71,10 +73,12 @@ class FollowerNoiseAgent(NoiseAgent):
             return Side.BID
         elif isinstance(message_passed, SellSignal):
             return Side.ASK
+        elif message_passed is None:
+            return None
 
     def wakeup(self, current_time: NanosecondTime) -> None:
         # Parent class handles discovery of exchange times and market_open wakeup call.
-        TradingAgent.wakeup(self,current_time)
+        TradingAgent.wakeup(self, current_time)
 
         self.state = "INACTIVE"
 
@@ -111,11 +115,11 @@ class FollowerNoiseAgent(NoiseAgent):
         else:
             self.state = "ACTIVE"
 
-    def placeOrder(self, side: Side) -> None:
+    def placeOrder(self) -> None:
         # place order in random direction at a mid
-        if side.is_bid():
+        if self.side.is_bid():
             buy_indicator = 1
-        elif side.is_ask():
+        elif self.side.is_ask():
             buy_indicator = 0
 
         bid, bid_vol, ask, ask_vol = self.get_known_bid_ask(self.symbol)
@@ -148,9 +152,11 @@ class FollowerNoiseAgent(NoiseAgent):
                 self.last_recommendations[sender_id] = message
                 if self.received_all_responses == True:
                     recommendation = self.final_recommendation()
-                    self.last_recommendations = {}
-                    self.get_current_spread()
-                    self.state = "AWAITING_SPREAD"
+                    self.side = recommendation
+                    if recommendation:
+                        self.last_recommendations = {}
+                        self.get_current_spread()
+                        self.state = "AWAITING_SPREAD"
 
         if self.state == "AWAITING_SPREAD":
             if isinstance(message, QuerySpreadResponseMsg):
@@ -158,5 +164,23 @@ class FollowerNoiseAgent(NoiseAgent):
                 if self.mkt_closed:
                     return
 
-                self.placeOrder(side=self.final_recommendation)
+                self.placeOrder(side=self.side)
                 self.state = "AWAITING_WAKEUP"
+
+        if isinstance(message, QueryFinalValue):
+            response = FinalValueResponse(symbol=self.symbol, obs_time=None, r_T=None,
+                                          sigma_t=None)
+
+            delay = self.get_agent_delay(sender_id)
+            self.send_message(recipient_id=sender_id, message=response, delay=delay)
+
+        if isinstance(message, QuerySideRecommendation):
+            if self.side is not None:
+                if self.side == Side.BID:
+                    response = BuySignal(symbol=self.symbol)
+                elif self.side == Side.ASK:
+                    response = SellSignal(symbol=self.symbol)
+                delay = self.get_agent_delay(sender_id)
+                self.send_message(recipient_id=sender_id, message=response, delay=delay)
+            else:
+                self.send_message(recipient_id=sender_id, message=TradingSignal(self.symbol), delay=delay)

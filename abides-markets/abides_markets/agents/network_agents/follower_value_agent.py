@@ -4,7 +4,8 @@ from typing import Optional, Dict, Tuple, List
 import numpy as np
 
 from abides_core import Message, NanosecondTime
-from ...messages.recommendations import QueryFinalValue, FinalValueResponse
+from ...messages.trading_signal import BuySignal, SellSignal, TradingSignal
+from ...messages.recommendations import QueryFinalValue, FinalValueResponse, QuerySideRecommendation
 from ...messages.query import QuerySpreadResponseMsg
 from ...orders import Side
 from ..trading_agent import TradingAgent
@@ -62,17 +63,21 @@ class FollowerValueAgent(ValueAgent):
         return False
 
     def get_most_recent_estimate(self) -> Tuple[NanosecondTime, float]:
-        sorted_messages = sorted(self.last_news.values(), key=lambda message: message.obs_time, reverse=True)
-        most_recent_message = sorted_messages[0]
-        obs_time = most_recent_message.obs_time
-        estimate = most_recent_message.R_t
-        return obs_time, estimate
+        news = [message for message in iter(self.last_news.values()) if message.r_T is not None]
+        if len(news) > 0:
+            sorted_messages = sorted(self.last_news.values(), key=lambda message: message.obs_time, reverse=True)
+            most_recent_message = sorted_messages[0]
+            obs_time = most_recent_message.obs_time
+            estimate = most_recent_message.r_T
+            return obs_time, estimate
+        else:
+            return None, None
 
     def wakeup(self, current_time: NanosecondTime) -> None:
         # Parent class handles discovery of exchange times and market_open wakeup call.
 
         # chcemy wywołać metodę wakeup TradingAgenta a nie value agenta
-        TradingAgent.wakeup(self,current_time)
+        TradingAgent.wakeup(self, current_time)
 
         self.state = "INACTIVE"
 
@@ -164,8 +169,28 @@ class FollowerValueAgent(ValueAgent):
                 self.last_news[sender_id] = message
                 if (self.received_all_responses == True):
                     obs_time, estimate = self.get_most_recent_estimate()
-                    self.prev_obs_time = obs_time
-                    self.final_fundamental = estimate
-                    self.last_news = {}
-                    self.get_current_spread(self.symbol)
-                    self.state = "AWAITING_SPREAD"
+                    if estimate and obs_time:
+                        self.prev_obs_time = obs_time
+                        self.final_fundamental = estimate
+                        self.last_news = {}
+                        self.get_current_spread(self.symbol)
+                        self.state = "AWAITING_SPREAD"
+
+        if isinstance(message, QueryFinalValue):
+            # when some FollowerValueAgent asks for fundamental value
+            response = FinalValueResponse(symbol=self.symbol, obs_time=self.prev_obs_time, r_T=self.final_fundamental,
+                                          sigma_t=self.sigma_t)
+
+            delay = self.get_agent_delay(sender_id)
+            self.send_message(recipient_id=sender_id, message=response, delay=delay)
+
+        if isinstance(message, QuerySideRecommendation):
+            if self.side is not None:
+                if self.side == Side.BID:
+                    response = BuySignal(symbol=self.symbol)
+                elif self.side == Side.ASK:
+                    response = SellSignal(symbol=self.symbol)
+                delay = self.get_agent_delay(sender_id)
+                self.send_message(recipient_id=sender_id, message=response, delay=delay)
+            else:
+                self.send_message(recipient_id=sender_id, message=TradingSignal(self.symbol), delay=delay)
