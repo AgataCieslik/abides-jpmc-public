@@ -62,7 +62,7 @@ class FollowerValueAgent(ValueAgent):
         return False
 
     def get_most_recent_estimate(self) -> Tuple[NanosecondTime, float]:
-        sorted_messages = sorted(self.last_news, key=lambda message: message.obs_time, reverse=True)
+        sorted_messages = sorted(self.last_news.values(), key=lambda message: message.obs_time, reverse=True)
         most_recent_message = sorted_messages[0]
         obs_time = most_recent_message.obs_time
         estimate = most_recent_message.R_t
