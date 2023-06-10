@@ -191,13 +191,14 @@ class ValueAgent(TradingAgent):
                                 (1 - (1 - self.kappa) ** (2 * delta)) / (1 - (1 - self.kappa) ** 2)
                         ) * self.sigma_s
 
+
         # Apply the new observation, with "confidence" in the observation inversely proportional
         # to the observation noise, and "confidence" in the previous estimate inversely proportional
         # to the shock variance.
         self.r_t = (self.sigma_n / (self.sigma_n + sigma_tprime)) * r_tprime
         self.r_t += (sigma_tprime / (self.sigma_n + sigma_tprime)) * obs_t
 
-        self.sigma_t = (self.sigma_n * self.sigma_t) / (self.sigma_n + self.sigma_t)
+        self.sigma_t = (self.sigma_n * sigma_tprime) / (self.sigma_n + sigma_tprime)
 
         # Now having a best estimate of the fundamental at time t, we can make our best estimate
         # of the final fundamental (for time T) as of current time t.  Delta is now the number
