@@ -119,6 +119,7 @@ def build_config(
     MKT_CLOSE = DATE + str_to_ns(end_time)
 
     # These times needed for distribution of arrival times of Noise Agents
+    # właściwie to czemu tego potrzebujemy
     NOISE_MKT_OPEN = MKT_OPEN - str_to_ns("00:30:00")
     NOISE_MKT_CLOSE = DATE + str_to_ns("16:00:00")
 

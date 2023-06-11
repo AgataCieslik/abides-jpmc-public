@@ -172,7 +172,7 @@ class FollowerNoiseAgent(NoiseAgent):
                         self.state = "AWAITING_SPREAD"
                     # TODO: czy to jest logicznie dobry rozkład? czy może powinien być lewoskośny? albo z innymi parametrami?
                     else:
-                        self.set_wakeup(get_wake_time(current_time + str_to_ns('1s'), self.mkt_closed))
+                        self.set_wakeup(get_wake_time(current_time + str_to_ns('5min'), self.mkt_close))
                         self.state = "AWAITING_WAKEUP"
 
         if self.state == "AWAITING_SPREAD":
