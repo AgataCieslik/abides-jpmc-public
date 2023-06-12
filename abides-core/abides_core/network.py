@@ -57,9 +57,6 @@ class Network:
         agent0 = self.get_agent_with_d(agent0_id)
         agent0.delete_contact(agent1_id)
 
-    def add_agent(self, agent: CommunicativeAgent) -> None:
-        self.agents.append(agent)
-
     def generate_networkx_object(self) -> nx.Graph:
         graph = nx.Graph()
         for agent in iter(self.agents):
@@ -67,6 +64,10 @@ class Network:
             for contact in iter(agent.contacts):
                 graph.add_edge(agent.id, contact.id)
         return graph
+
+    def add_agent(self, agent: CommunicativeAgent) -> None:
+        self.agents.append(agent)
+
 
 
 class CompleteGraph(Network):
