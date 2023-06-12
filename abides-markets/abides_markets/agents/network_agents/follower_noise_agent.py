@@ -2,15 +2,16 @@ import logging
 from typing import Optional, List, Dict
 
 import numpy as np
-from ..trading_agent import TradingAgent
-from ..noise_agent import NoiseAgent
 from abides_core import Message, NanosecondTime
-from ...messages.trading_signal import TradingSignal, BuySignal, SellSignal
-from ...generators import OrderSizeGenerator
-from ...messages.recommendations import QuerySideRecommendation, QueryFinalValue, FinalValueResponse
-from ...messages.query import QuerySpreadResponseMsg
-from ...orders import Side
+from abides_core.utils import get_wake_time, str_to_ns
+
+from ..noise_agent import NoiseAgent
 from ..trading_agent import TradingAgent
+from ...generators import OrderSizeGenerator
+from ...messages.query import QuerySpreadResponseMsg
+from ...messages.recommendations import QuerySideRecommendation, QueryFinalValue, FinalValueResponse
+from ...messages.trading_signal import TradingSignal, BuySignal, SellSignal
+from ...orders import Side
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ class FollowerNoiseAgent(NoiseAgent):
             starting_cash: int = 100000,
             log_orders: bool = False,
             order_size_model: Optional[OrderSizeGenerator] = None,
+            # to jest średni pomysł, by tu był None, powinna być jakaś wartość liczbowa (dotyczy też NoiseAgent)
             wakeup_time: Optional[NanosecondTime] = None,
             contacts: Optional[List[int]] = None,
             delays: Optional[List[int]] = None
@@ -43,8 +45,15 @@ class FollowerNoiseAgent(NoiseAgent):
         self.last_recommendations: Dict[int, TradingSignal] = {}
         self.side = None
 
+        # atrybuty robocze
+        self.final_recoms = []
+        self.messages = []
+        self.wakeups = 0
+        self.messages_sent = []
+
     def get_recommendations(self) -> None:
         message = QuerySideRecommendation(self.symbol)
+        self.messages_sent.append(message)
         self.broadcast(message)
 
     @property
@@ -59,7 +68,7 @@ class FollowerNoiseAgent(NoiseAgent):
         message_occurencies = {}
         message_passed = None
 
-        for sender, signal in self.last_recomendations.items():
+        for sender, signal in self.last_recommendations.items():
             message_type = type(signal)
             if message_type == 'TradingSignal':
                 continue
@@ -70,13 +79,17 @@ class FollowerNoiseAgent(NoiseAgent):
             if max(message_occurencies, key=message_occurencies.get) == message_type:
                 message_passed = signal
         if isinstance(message_passed, BuySignal):
+            self.final_recoms.append(message_passed)
             return Side.BID
         elif isinstance(message_passed, SellSignal):
+            self.final_recoms.append(message_passed)
             return Side.ASK
         elif message_passed is None:
+            self.final_recoms.append(None)
             return None
 
     def wakeup(self, current_time: NanosecondTime) -> None:
+        self.wakeups += 1
         # Parent class handles discovery of exchange times and market_open wakeup call.
         TradingAgent.wakeup(self, current_time)
 
@@ -105,11 +118,11 @@ class FollowerNoiseAgent(NoiseAgent):
             return
 
         if self.mkt_closed and self.symbol not in self.daily_close_price:
-            self.get_recommendations()
-            self.state = "AWAITING_ADVICE"
+            self.get_current_spread()
+            self.state = "AWAITING_SPREAD"
             return
 
-        if type(self) == NoiseAgent:
+        if type(self) == FollowerNoiseAgent:
             self.get_recommendations()
             self.state = "AWAITING_ADVICE"
         else:
@@ -138,7 +151,7 @@ class FollowerNoiseAgent(NoiseAgent):
     ) -> None:
         # Parent class schedules market open wakeup call once market open/close times are known.
         super().receive_message(current_time, sender_id, message)
-
+        self.messages.append((current_time, sender_id, message))
         # We have been awakened by something other than our scheduled wakeup.
         # If our internal state indicates we were waiting for a particular event,
         # check if we can transition to a new state.
@@ -155,8 +168,12 @@ class FollowerNoiseAgent(NoiseAgent):
                     self.side = recommendation
                     if recommendation:
                         self.last_recommendations = {}
-                        self.get_current_spread()
+                        self.get_current_spread(self.symbol)
                         self.state = "AWAITING_SPREAD"
+                    # TODO: czy to jest logicznie dobry rozkład? czy może powinien być lewoskośny? albo z innymi parametrami?
+                    else:
+                        self.set_wakeup(get_wake_time(current_time + str_to_ns('5min'), self.mkt_close))
+                        self.state = "AWAITING_WAKEUP"
 
         if self.state == "AWAITING_SPREAD":
             if isinstance(message, QuerySpreadResponseMsg):
@@ -175,12 +192,12 @@ class FollowerNoiseAgent(NoiseAgent):
             self.send_message(recipient_id=sender_id, message=response, delay=delay)
 
         if isinstance(message, QuerySideRecommendation):
+            delay = self.get_agent_delay(sender_id)
             if self.side is not None:
                 if self.side == Side.BID:
                     response = BuySignal(symbol=self.symbol)
                 elif self.side == Side.ASK:
                     response = SellSignal(symbol=self.symbol)
-                delay = self.get_agent_delay(sender_id)
                 self.send_message(recipient_id=sender_id, message=response, delay=delay)
             else:
                 self.send_message(recipient_id=sender_id, message=TradingSignal(self.symbol), delay=delay)

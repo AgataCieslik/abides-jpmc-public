@@ -2,14 +2,13 @@ import logging
 from typing import Optional, Dict, Tuple, List
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
-from ...messages.trading_signal import BuySignal, SellSignal, TradingSignal
-from ...messages.recommendations import QueryFinalValue, FinalValueResponse, QuerySideRecommendation
-from ...messages.query import QuerySpreadResponseMsg
-from ...orders import Side
+
 from ..trading_agent import TradingAgent
 from ..value_agent import ValueAgent
+from ...messages.recommendations import QueryFinalValue, FinalValueResponse, QuerySideRecommendation
+from ...messages.trading_signal import BuySignal, SellSignal, TradingSignal
+from ...orders import Side
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +62,9 @@ class FollowerValueAgent(ValueAgent):
         return False
 
     def get_most_recent_estimate(self) -> Tuple[NanosecondTime, float]:
-        news = [message for message in iter(self.last_news.values()) if message.r_T is not None]
+        news = [message for message in iter(self.last_news.values()) if message.r_T and message.obs_time]
         if len(news) > 0:
-            sorted_messages = sorted(self.last_news.values(), key=lambda message: message.obs_time, reverse=True)
+            sorted_messages = sorted(news, key=lambda message: message.obs_time, reverse=True)
             most_recent_message = sorted_messages[0]
             obs_time = most_recent_message.obs_time
             estimate = most_recent_message.r_T
@@ -185,12 +184,12 @@ class FollowerValueAgent(ValueAgent):
             self.send_message(recipient_id=sender_id, message=response, delay=delay)
 
         if isinstance(message, QuerySideRecommendation):
+            delay = self.get_agent_delay(sender_id)
             if self.side is not None:
                 if self.side == Side.BID:
                     response = BuySignal(symbol=self.symbol)
                 elif self.side == Side.ASK:
                     response = SellSignal(symbol=self.symbol)
-                delay = self.get_agent_delay(sender_id)
                 self.send_message(recipient_id=sender_id, message=response, delay=delay)
             else:
                 self.send_message(recipient_id=sender_id, message=TradingSignal(self.symbol), delay=delay)
