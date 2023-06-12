@@ -1,8 +1,11 @@
-from .communicative_agent import CommunicativeAgent
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import List, Dict, Type, Generator
 from typing_extensions import Self
+
+import networkx as nx
 import numpy as np
+
+from .communicative_agent import CommunicativeAgent
 
 
 # czy klasa z abstrakcyjnymi metodami musi dziedziczyć po ABC? chyba nie?
@@ -56,6 +59,14 @@ class Network:
 
     def add_agent(self, agent: CommunicativeAgent) -> None:
         self.agents.append(agent)
+
+    def generate_networkx_object(self) -> nx.Graph:
+        graph = nx.Graph()
+        for agent in iter(self.agents):
+            graph.add_node(agent.id, agent_type=type(agent))
+            for contact in iter(agent.contacts):
+                graph.add_edge(agent.id, contact.id)
+        return graph
 
 
 class CompleteGraph(Network):
