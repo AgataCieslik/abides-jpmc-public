@@ -60,9 +60,9 @@ class Network:
     def generate_networkx_object(self) -> nx.Graph:
         graph = nx.Graph()
         for agent in iter(self.agents):
-            graph.add_node(agent.id, agent_type=type(agent))
+            graph.add_node(agent.id)
             for contact in iter(agent.contacts):
-                graph.add_edge(agent.id, contact.id)
+                graph.add_edge(agent.id, contact)
         return graph
 
     def add_agent(self, agent: CommunicativeAgent) -> None:

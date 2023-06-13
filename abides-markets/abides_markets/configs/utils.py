@@ -16,3 +16,4 @@ def generate_BA_graph_sequence(starting_graph: Network, m: int, new_agents: List
         new_graph = BANetwork.construct_from_agent_list(starting_graph, new_agents_batch, m, random_state)
         yield new_graph
         starting_graph = deepcopy(new_graph)
+

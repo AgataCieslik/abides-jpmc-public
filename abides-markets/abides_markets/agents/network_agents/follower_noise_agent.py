@@ -167,6 +167,8 @@ class FollowerNoiseAgent(NoiseAgent):
                     recommendation = self.final_recommendation()
                     self.side = recommendation
                     if recommendation:
+                        #TODO: do rozważenia
+                        #self.logEvent("RECEIVED_SIDE_RECOMMENDATION", recommendation)
                         self.last_recommendations = {}
                         self.get_current_spread(self.symbol)
                         self.state = "AWAITING_SPREAD"

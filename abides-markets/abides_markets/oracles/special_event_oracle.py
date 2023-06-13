@@ -17,7 +17,7 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
             mkt_close: NanosecondTime,
             # w tym słowniku symbols określamy paramety megashocku - jak często i jak intensywnie do megashocków dochodzi
             symbols: Dict[str, Dict[str, Any]],
-            special_events: Dict[str, List[Dict[str, Any]]]
+            special_events: Dict[str, List[Dict[str, Any]]] = {}
     ) -> None:
         super().__init__(mkt_open, mkt_close, symbols)
         # założenie: wydarzenia są posortowane według czasu występowania
