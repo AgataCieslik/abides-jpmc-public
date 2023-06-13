@@ -1,15 +1,15 @@
 import logging
-from typing import Optional,List
+from typing import Optional, List
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
 
+from .trading_agent import TradingAgent
 from ..messages.query import QuerySpreadResponseMsg
 from ..orders import Side
-from .trading_agent import TradingAgent
 
 logger = logging.getLogger(__name__)
+
 
 # do rozważenia: czy potrzebuję dorzucić contacts i delays? - chyba tak
 class ValueAgent(TradingAgent):
@@ -68,6 +68,15 @@ class ValueAgent(TradingAgent):
 
         self.depth_spread: int = 2
         self.side: Optional[Side] = None
+
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.trading = False
+        self.state = "AWAITING_WAKEUP"
+        self.r_t = self.r_bar
+        self.sigma_t = 0
+        self.prev_wake_time = None
+        self.side = None
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         # self.kernel is set in Agent.kernel_initializing()
@@ -190,7 +199,6 @@ class ValueAgent(TradingAgent):
         sigma_tprime += (
                                 (1 - (1 - self.kappa) ** (2 * delta)) / (1 - (1 - self.kappa) ** 2)
                         ) * self.sigma_s
-
 
         # Apply the new observation, with "confidence" in the observation inversely proportional
         # to the observation noise, and "confidence" in the previous estimate inversely proportional

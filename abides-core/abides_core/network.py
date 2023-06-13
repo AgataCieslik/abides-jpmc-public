@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from abc import abstractmethod
 from typing import List, Dict, Type, Generator
 from typing_extensions import Self
@@ -12,13 +13,16 @@ from .communicative_agent import CommunicativeAgent
 
 # czy klasa z abstrakcyjnymi metodami musi dziedziczyć po ABC? chyba nie?
 class Network:
-    def __init__(self, agents: List[CommunicativeAgent] = None) -> None:
+    def __init__(self, agents: List[CommunicativeAgent] = list()) -> None:
         self.agents = agents
 
     @classmethod
     @abstractmethod
     def construct_from_agent_list(cls, agent_list: List[CommunicativeAgent]) -> Self:
         pass
+
+    def get_agents(self):
+        return sorted(self.agents, key=lambda agent: agent.id)
 
     @property
     def size(self):

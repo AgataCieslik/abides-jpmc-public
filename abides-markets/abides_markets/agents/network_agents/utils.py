@@ -48,17 +48,25 @@ def generate_bests_df(end_state: Dict, symbol: str, config_name: str) -> pd.Data
     return bests
 
 
-def updated_holdings(logs: pd.DataFrame, symbol: str = "ABM") -> pd.DataFrame:
+def updated_holdings(logs: pd.DataFrame, config_name: str, symbol: str = "ABM") -> pd.DataFrame:
     filtered_logs = logs.loc[
         (logs['EventType'] == 'HOLDINGS_UPDATED'), ['EventTime', 'agent_id', 'agent_type', 'CASH', symbol]]
+    filtered_logs['config_name'] = config_name
     return filtered_logs
 
 
-def executed_orders(logs: pd.DataFrame) -> pd.DataFrame:
-    return logs.loc[
+def executed_orders(logs: pd.DataFrame, config_name: str) -> pd.DataFrame:
+    filtered_logs = logs.loc[
         (logs['EventType'] == 'ORDER_EXECUTED'), ['EventTime', 'time_placed', 'EventType', 'agent_id', 'agent_type',
                                                   'side', 'quantity', 'fill_price', 'limit_price']]
-def final_surplus(logs: pd.DataFrame)->pd.DataFrame:
-    filtered_logs =  logs.loc[logs['EventType'].isin(['FINAL_VALUATION', 'STARTING_CASH']),['EventType', 'agent_id','agent_type', 'ScalarEventValue']]
+    filtered_logs['config_name'] = config_name
+    return filtered_logs
+
+
+def final_surplus(logs: pd.DataFrame, config_name: str) -> pd.DataFrame:
+    filtered_logs = logs.loc[
+        logs['EventType'].isin(['FINAL_VALUATION', 'STARTING_CASH']), ['EventType', 'agent_id', 'agent_type',
+                                                                       'ScalarEventValue']]
     filtered_logs = pd.pivot_table(filtered_logs, columns=['EventType'], index=['agent_id', 'agent_type'])
+    filtered_logs['config_name'] = config_name
     return filtered_logs

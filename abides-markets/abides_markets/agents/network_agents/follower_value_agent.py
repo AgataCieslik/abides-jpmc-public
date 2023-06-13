@@ -50,6 +50,12 @@ class FollowerValueAgent(ValueAgent):
         self.last_news: Dict[int, FinalValueResponse] = {}
         self.final_fundamental: Optional[float] = None
 
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.prev_obs_time = None
+        self.last_news = {}
+        self.final_fundamental = None
+
     def query_insiders(self) -> None:
         message = QueryFinalValue(self.symbol)
         self.broadcast(message)

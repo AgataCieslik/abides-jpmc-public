@@ -13,6 +13,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from abides_core.network import Network, CentralizedNetwork
 from abides_core.utils import get_wake_time, str_to_ns
 from abides_markets.agents import (
     ExchangeAgent,
@@ -34,21 +35,32 @@ def generate_agents(insiders_num, follower_value_agents_num, follower_noise_agen
                     follower_value_agent_params, follower_noise_agent_params):
     # generujemy agentów do sieci
     insiders = [InsiderValueAgent(id=next(id_generator), **insider_params) for i in range(insiders_num)]
-    follower_value_agents = [FollowerValueAgent(id=next(id_generator), **follower_value_agent_params) for i in range(follower_value_agents_num)]
-    follower_noise_agents = [FollowerNoiseAgent(id=next(id_generator), **follower_noise_agent_params) for i in range(follower_noise_agents_num)]
+    follower_value_agents = [FollowerValueAgent(id=next(id_generator), **follower_value_agent_params) for i in
+                             range(follower_value_agents_num)]
+    follower_noise_agents = [FollowerNoiseAgent(id=next(id_generator), **follower_noise_agent_params) for i in
+                             range(follower_noise_agents_num)]
     return insiders, follower_value_agents, follower_noise_agents
 
-def generate_centers(insiders, followers,insider_neighbours_num=2):
+
+def generate_starting_graph(insiders, followers, insider_neighbours_num=2):
+    graph = Network()
     for insider in iter(insiders):
-        pass
-    # generujemy centra - grafy od których zaczynamy generowanie
-    pass
+        followers_ids = [agent.id for agent in iter(followers)]
+        followers_in_center_ids = np.random.choice(followers_ids, size=insider_neighbours_num, replace=False)
+        followers_in_center = [follower for follower in iter(followers) if (follower.id in followers_in_center_ids)]
+        followers = [follower for follower in iter(followers) if not (follower.id in followers_in_center_ids)]
+
+        new_center = CentralizedNetwork.construct_from_agent_list(central_agent=insider, agent_list=followers_in_center)
+        graph.join(new_center)
+    return graph, followers
+
 
 def build_config(
         communication_graph,
         special_events,
         mkt_open,
         mkt_close,
+        oracle_seed,
         order_size_model=OrderSizeModel(),
         seed=int(datetime.now().timestamp() * 1_000_000) % (2 ** 32 - 1),
         date="20210205",
@@ -142,7 +154,7 @@ def build_config(
     # These times needed for distribution of arrival times of Noise Agents
     # właściwie to czemu tego potrzebujemy
     NOISE_MKT_OPEN = MKT_OPEN - str_to_ns("00:30:00")
-    NOISE_MKT_CLOSE = mkt_close
+    NOISE_MKT_CLOSE = mkt_close + str_to_ns("00:30:00")
 
     # oracle
     symbols = {
@@ -155,7 +167,7 @@ def build_config(
             "megashock_mean": megashock_mean,
             "megashock_var": megashock_var,
             # TODO: dtype: czy to jest mi niezbędne, dlaczego u innych może to działać? inna wersja bibliotek?
-            "random_state": np.random.RandomState(seed=np.random.randint(low=0, high=2 ** 32, dtype=np.int64))
+            "random_state": np.random.RandomState(seed=oracle_seed)
         }
     }
 
@@ -192,11 +204,15 @@ def build_config(
     # konwencja: agenci w grafie przyjmują id od 1 i są kolejnymi agentami po giełdzie
     if communication_graph:
         # jeśli graf jest None, to mamy oryginalna konfigurację rmsc04
-        follower_noise_agents = [agent for agent in iter(communication_graph.agents) if
+        graph_agents = communication_graph.get_agents()
+        for agent in iter(graph_agents):
+            agent.reset_properties()
+
+        follower_noise_agents = [agent for agent in iter(graph_agents) if
                                  isinstance(agent, FollowerNoiseAgent)]
-        follower_value_agents = [agent for agent in iter(communication_graph.agents) if
+        follower_value_agents = [agent for agent in iter(graph_agents) if
                                  isinstance(agent, FollowerValueAgent)]
-        insider_agents = [agent for agent in iter(communication_graph.agents) if
+        insider_agents = [agent for agent in iter(graph_agents) if
                           isinstance(agent, InsiderValueAgent)]
         num_noise_agents -= len(follower_noise_agents)
         num_value_agents -= len(follower_value_agents)
