@@ -39,7 +39,10 @@ def generate_agents(insiders_num, follower_value_agents_num, follower_noise_agen
     return insiders, follower_value_agents, follower_noise_agents
 
 def generate_centers(insiders, followers,insider_neighbours_num=2):
+    for insider in iter(insiders):
+        pass
     # generujemy centra - grafy od których zaczynamy generowanie
+    pass
 
 def build_config(
         communication_graph,

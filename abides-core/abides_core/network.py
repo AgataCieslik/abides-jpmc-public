@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import abstractmethod
 from typing import List, Dict, Type, Generator
 from typing_extensions import Self
@@ -65,9 +67,11 @@ class Network:
                 graph.add_edge(agent.id, contact)
         return graph
 
+    def join(self, other_network: Network) -> None:
+        self.agents.extend(other_network.agents)
+
     def add_agent(self, agent: CommunicativeAgent) -> None:
         self.agents.append(agent)
-
 
 
 class CompleteGraph(Network):
