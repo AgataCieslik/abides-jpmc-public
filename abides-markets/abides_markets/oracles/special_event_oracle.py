@@ -17,7 +17,7 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
             mkt_close: NanosecondTime,
             # w tym słowniku symbols określamy paramety megashocku - jak często i jak intensywnie do megashocków dochodzi
             symbols: Dict[str, Dict[str, Any]],
-            special_events: Dict[str, List[Dict[str, Any]]]
+            special_events: Dict[str, List[Dict[str, Any]]] = {}
     ) -> None:
         super().__init__(mkt_open, mkt_close, symbols)
         # założenie: wydarzenia są posortowane według czasu występowania
@@ -54,10 +54,13 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
         msv = self.megashocks[symbol][-1]["MegashockValue"]
 
         # wyznaczamy eventy, które mają miejsce w okresie od ostatniego updatu do teraz
-        special_events = self.special_events[symbol]
-        current_events = [event for event in iter(special_events) if
-                          ((event['SpecialEventTime'] <= current_time) and (event['SpecialEventTime'] > pt))]
-        self.special_events_lens.append(len(current_events))
+        if self.special_events and len(self.special_events.keys()) > 0:
+            special_events = self.special_events[symbol]
+            current_events = [event for event in iter(special_events) if
+                              ((event['SpecialEventTime'] <= current_time) and (event['SpecialEventTime'] > pt))]
+            self.special_events_lens.append(len(current_events))
+        else:
+            current_events = None
 
         if mst < current_time:
             while mst < current_time:
@@ -96,7 +99,7 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
 
                 # The loop will continue until there are no more megashocks before the time requested
                 # by the calling method.
-        elif len(current_events) > 0:
+        elif current_events and len(current_events) > 0:
             for event in current_events:
                 event_time = event['SpecialEventTime']
                 event_value = event['SpecialEventValue']

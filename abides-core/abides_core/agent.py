@@ -74,6 +74,10 @@ class Agent:
 
     ### Flow of required kernel listening methods:
     ### init -> start -> (entire simulation) -> end -> terminate
+    def reset_properties(self)->None:
+        self.kernel = None
+        self.current_time = 0
+        self.log = []
 
     def kernel_initializing(self, kernel) -> None:
         """

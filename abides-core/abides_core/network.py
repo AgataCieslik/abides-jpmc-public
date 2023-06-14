@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import copy
 from abc import abstractmethod
 from typing import List, Dict, Type, Generator
 from typing_extensions import Self
@@ -10,13 +13,16 @@ from .communicative_agent import CommunicativeAgent
 
 # czy klasa z abstrakcyjnymi metodami musi dziedziczyć po ABC? chyba nie?
 class Network:
-    def __init__(self, agents: List[CommunicativeAgent] = None) -> None:
+    def __init__(self, agents: List[CommunicativeAgent] = list()) -> None:
         self.agents = agents
 
     @classmethod
     @abstractmethod
     def construct_from_agent_list(cls, agent_list: List[CommunicativeAgent]) -> Self:
         pass
+
+    def get_agents(self):
+        return sorted(self.agents, key=lambda agent: agent.id)
 
     @property
     def size(self):
@@ -60,14 +66,16 @@ class Network:
     def generate_networkx_object(self) -> nx.Graph:
         graph = nx.Graph()
         for agent in iter(self.agents):
-            graph.add_node(agent.id, agent_type=type(agent))
+            graph.add_node(agent.id)
             for contact in iter(agent.contacts):
-                graph.add_edge(agent.id, contact.id)
+                graph.add_edge(agent.id, contact)
         return graph
+
+    def join(self, other_network: Network) -> None:
+        self.agents.extend(other_network.agents)
 
     def add_agent(self, agent: CommunicativeAgent) -> None:
         self.agents.append(agent)
-
 
 
 class CompleteGraph(Network):

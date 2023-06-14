@@ -45,15 +45,13 @@ class FollowerNoiseAgent(NoiseAgent):
         self.last_recommendations: Dict[int, TradingSignal] = {}
         self.side = None
 
-        # atrybuty robocze
-        self.final_recoms = []
-        self.messages = []
-        self.wakeups = 0
-        self.messages_sent = []
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.last_recommendations = {}
+        self.side = None
 
     def get_recommendations(self) -> None:
         message = QuerySideRecommendation(self.symbol)
-        self.messages_sent.append(message)
         self.broadcast(message)
 
     @property
@@ -79,17 +77,13 @@ class FollowerNoiseAgent(NoiseAgent):
             if max(message_occurencies, key=message_occurencies.get) == message_type:
                 message_passed = signal
         if isinstance(message_passed, BuySignal):
-            self.final_recoms.append(message_passed)
             return Side.BID
         elif isinstance(message_passed, SellSignal):
-            self.final_recoms.append(message_passed)
             return Side.ASK
         elif message_passed is None:
-            self.final_recoms.append(None)
             return None
 
     def wakeup(self, current_time: NanosecondTime) -> None:
-        self.wakeups += 1
         # Parent class handles discovery of exchange times and market_open wakeup call.
         TradingAgent.wakeup(self, current_time)
 
@@ -151,7 +145,7 @@ class FollowerNoiseAgent(NoiseAgent):
     ) -> None:
         # Parent class schedules market open wakeup call once market open/close times are known.
         super().receive_message(current_time, sender_id, message)
-        self.messages.append((current_time, sender_id, message))
+
         # We have been awakened by something other than our scheduled wakeup.
         # If our internal state indicates we were waiting for a particular event,
         # check if we can transition to a new state.
@@ -167,6 +161,8 @@ class FollowerNoiseAgent(NoiseAgent):
                     recommendation = self.final_recommendation()
                     self.side = recommendation
                     if recommendation:
+                        # TODO: do rozważenia
+                        # self.logEvent("RECEIVED_SIDE_RECOMMENDATION", recommendation)
                         self.last_recommendations = {}
                         self.get_current_spread(self.symbol)
                         self.state = "AWAITING_SPREAD"

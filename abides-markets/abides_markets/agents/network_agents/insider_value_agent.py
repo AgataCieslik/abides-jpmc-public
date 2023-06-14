@@ -2,15 +2,13 @@ import logging
 from typing import Optional, List
 
 import numpy as np
+from abides_core import Message
+from abides_core import NanosecondTime
 
-from abides_core import Message, NanosecondTime
-
-from ...messages.query import QuerySpreadResponseMsg
+from ..value_agent import ValueAgent
 from ...messages.recommendations import QueryFinalValue, FinalValueResponse, QuerySideRecommendation
 from ...messages.trading_signal import TradingSignal, BuySignal, SellSignal
 from ...orders import Side
-from abides_core import NanosecondTime
-from ..value_agent import ValueAgent
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +43,10 @@ class InsiderValueAgent(ValueAgent):
         self.horizon = horizon
         self.final_fundamental: Optional[float] = None
 
-        # atrybuty robocze
-        self.signals_sent = []
-        self.final_value_sent = []
-
-
+    def reset_properties(self):
+        super().reset_properties()
+        self.prev_obs_time = None
+        self.final_fundamental = None
 
     # kernel_starting, kernel_stopping, wakeup - chyba nie wymagają modyfikacji
     def updateEstimates(self) -> int:
@@ -149,7 +146,6 @@ class InsiderValueAgent(ValueAgent):
             # when some FollowerValueAgent asks for fundamental value
             response = FinalValueResponse(symbol=self.symbol, obs_time=self.prev_obs_time, r_T=self.final_fundamental,
                                           sigma_t=self.sigma_t)
-            self.final_value_sent.append((sender_id, current_time, response))
             delay = self.get_agent_delay(sender_id)
             self.send_message(recipient_id=sender_id, message=response, delay=delay)
 
@@ -161,9 +157,7 @@ class InsiderValueAgent(ValueAgent):
                 elif self.side == Side.ASK:
                     response = SellSignal(symbol=self.symbol)
                 self.send_message(recipient_id=sender_id, message=response, delay=delay)
-                self.signals_sent.append((sender_id, response, current_time))
             else:
-                self.signals_sent.append((sender_id, TradingSignal(symbol=self.symbol), current_time))
                 self.send_message(recipient_id=sender_id, message=TradingSignal(symbol=self.symbol), delay=delay)
 
 # get wake frequency - nie ma potrzeby modyfikowania

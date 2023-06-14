@@ -33,7 +33,7 @@ def build_config(
     date="20210205",
         # ta nazwa jest mocno myląca, bo to wygląda na czas/timedeltę a nie godzinę zakończenia
    #end_time="10:00:00",
-    end_time="16:00:00",
+    end_time="17:00:00",
     stdout_log_level="INFO",
     ticker="ABM",
     starting_cash=10_000_000,  # Cash in this simulator is always in CENTS.

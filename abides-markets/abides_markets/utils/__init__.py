@@ -1,15 +1,12 @@
 import datetime
-import sys
-import traceback
 import warnings
 from contextlib import contextmanager
 from typing import List, Union
 
 import numpy as np
 import pandas as pd
-from scipy.spatial.distance import pdist, squareform
-
 from abides_core import LatencyModel
+from scipy.spatial.distance import pdist, squareform
 
 
 # Utility method to flatten nested lists.

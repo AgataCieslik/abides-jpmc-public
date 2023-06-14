@@ -5,10 +5,11 @@ from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
 from abides_core.utils import fmt_ts
 
+from .exchange_agent import ExchangeAgent
+from .financial_agent import FinancialAgent
 from ..messages.market import (
     MarketClosePriceRequestMsg,
     MarketClosePriceMsg,
@@ -44,8 +45,6 @@ from ..messages.query import (
     QueryTransactedVolResponseMsg,
 )
 from ..orders import Order, LimitOrder, MarketOrder, Side
-from .financial_agent import FinancialAgent
-from .exchange_agent import ExchangeAgent
 
 logger = logging.getLogger(__name__)
 
@@ -150,6 +149,24 @@ class TradingAgent(FinancialAgent):
         self.mkt_closed: bool = False
 
     # Simulation lifecycle messages.
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.mkt_open = None
+        self.mkt_close = None
+        self.holdings = {"CASH": self.starting_cash}
+        self.orders = {}
+        self.last_trade = {}
+        self.exchange_ts = {}
+        self.daily_close_price = {}
+        self.nav_diff = 0
+        self.basket_size = 0
+        self.known_bids = {}
+        self.known_asks = {}
+        self.stream_history = {}
+        self.transacted_volume = {}
+        self.executed_orders = []
+        self.first_wake = True
+        self.mkt_closed = False
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         """

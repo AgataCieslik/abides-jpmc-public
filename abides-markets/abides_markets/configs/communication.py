@@ -13,6 +13,7 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
+from abides_core.network import Network, CentralizedNetwork
 from abides_core.utils import get_wake_time, str_to_ns
 from abides_markets.agents import (
     ExchangeAgent,
@@ -23,21 +24,49 @@ from abides_markets.agents import (
 )
 from abides_markets.agents.network_agents import FollowerNoiseAgent, FollowerValueAgent, InsiderValueAgent
 from abides_markets.models import OrderSizeModel
-from abides_markets.oracles import SparseMeanRevertingOracle
+from abides_markets.oracles import SpecialEventOracle
 from abides_markets.utils import generate_latency_model
 
 
 ########################################################################################################################
 ############################################### GENERAL CONFIG #########################################################
 
+def generate_agents(insiders_num, follower_value_agents_num, follower_noise_agents_num, id_generator, insider_params,
+                    follower_value_agent_params, follower_noise_agent_params):
+    # generujemy agentów do sieci
+    insiders = [InsiderValueAgent(id=next(id_generator), **insider_params) for i in range(insiders_num)]
+    follower_value_agents = [FollowerValueAgent(id=next(id_generator), **follower_value_agent_params) for i in
+                             range(follower_value_agents_num)]
+    follower_noise_agents = [FollowerNoiseAgent(id=next(id_generator), **follower_noise_agent_params) for i in
+                             range(follower_noise_agents_num)]
+    return insiders, follower_value_agents, follower_noise_agents
+
+
+def generate_starting_graph(insiders, followers, insider_neighbours_num=2):
+    graph = Network()
+    for insider in iter(insiders):
+        followers_ids = [agent.id for agent in iter(followers)]
+        followers_in_center_ids = np.random.choice(followers_ids, size=insider_neighbours_num, replace=False)
+        followers_in_center = [follower for follower in iter(followers) if (follower.id in followers_in_center_ids)]
+        followers = [follower for follower in iter(followers) if not (follower.id in followers_in_center_ids)]
+
+        new_center = CentralizedNetwork.construct_from_agent_list(central_agent=insider, agent_list=followers_in_center)
+        graph.join(new_center)
+    return graph, followers
+
 
 def build_config(
         communication_graph,
+        special_events,
+        mkt_open,
+        mkt_close,
+        oracle_seed,
+        order_size_model=OrderSizeModel(),
         seed=int(datetime.now().timestamp() * 1_000_000) % (2 ** 32 - 1),
         date="20210205",
         # ta nazwa jest mocno myląca, bo to wygląda na czas/timedeltę a nie godzinę zakończenia
         # end_time="10:00:00",
-        end_time="16:00:00",
+        end_time="17:00:00",
         stdout_log_level="INFO",
         ticker="ABM",
         starting_cash=10_000_000,  # Cash in this simulator is always in CENTS.
@@ -61,8 +90,6 @@ def build_config(
         megashock_lambda_a=2.77778e-18,
         megashock_mean=1000,
         megashock_var=50_000,
-        # zastanowić się, czy tak to zostawić
-        oracle_random_state=np.random.RandomState(seed=np.random.randint(low=0, high=2 ** 32, dtype=np.int64)),
         # 4) Market Maker Agents
         # each elem of mm_params is tuple (window_size, pov, num_ticks, wake_up_freq, min_order_size)
         mm_window_size="adaptive",
@@ -109,7 +136,7 @@ def build_config(
     mm_wake_up_freq = str_to_ns(mm_wake_up_freq)
 
     # order size model
-    ORDER_SIZE_MODEL = OrderSizeModel()  # Order size model
+    ORDER_SIZE_MODEL = order_size_model  # Order size model
     # market marker derived parameters
     MM_PARAMS = [
         (mm_window_size, mm_pov, mm_num_ticks, mm_wake_up_freq, mm_min_order_size),
@@ -121,13 +148,13 @@ def build_config(
 
     # date&time
     DATE = int(pd.to_datetime(date).to_datetime64())
-    MKT_OPEN = DATE + str_to_ns("09:30:00")
-    MKT_CLOSE = DATE + str_to_ns(end_time)
+    MKT_OPEN = mkt_open
+    MKT_CLOSE = mkt_close
 
     # These times needed for distribution of arrival times of Noise Agents
     # właściwie to czemu tego potrzebujemy
     NOISE_MKT_OPEN = MKT_OPEN - str_to_ns("00:30:00")
-    NOISE_MKT_CLOSE = DATE + str_to_ns("16:00:00")
+    NOISE_MKT_CLOSE = mkt_close + str_to_ns("00:30:00")
 
     # oracle
     symbols = {
@@ -140,11 +167,11 @@ def build_config(
             "megashock_mean": megashock_mean,
             "megashock_var": megashock_var,
             # TODO: dtype: czy to jest mi niezbędne, dlaczego u innych może to działać? inna wersja bibliotek?
-            "random_state": oracle_random_state
+            "random_state": np.random.RandomState(seed=oracle_seed)
         }
     }
 
-    oracle = SparseMeanRevertingOracle(MKT_OPEN, NOISE_MKT_CLOSE, symbols)
+    oracle = SpecialEventOracle(MKT_OPEN, NOISE_MKT_CLOSE, symbols, special_events)
 
     # Agent configuration
     agent_count, agents, agent_types = 0, [], []
@@ -175,22 +202,28 @@ def build_config(
 
     # communication
     # konwencja: agenci w grafie przyjmują id od 1 i są kolejnymi agentami po giełdzie
-    follower_noise_agents = [agent for agent in iter(communication_graph.agents) if
-                             isinstance(agent, FollowerNoiseAgent)]
-    follower_value_agents = [agent for agent in iter(communication_graph.agents) if
-                             isinstance(agent, FollowerValueAgent)]
-    insider_agents = [agent for agent in iter(communication_graph.agents) if
-                      isinstance(agent, InsiderValueAgent)]
-    num_noise_agents -= len(follower_noise_agents)
-    num_value_agents -= len(follower_value_agents)
-    num_value_agents -= len(insider_agents)
+    if communication_graph:
+        # jeśli graf jest None, to mamy oryginalna konfigurację rmsc04
+        graph_agents = communication_graph.get_agents()
+        for agent in iter(graph_agents):
+            agent.reset_properties()
 
-    agents.extend(follower_noise_agents)
-    agents.extend(follower_value_agents)
-    agents.extend(insider_agents)
+        follower_noise_agents = [agent for agent in iter(graph_agents) if
+                                 isinstance(agent, FollowerNoiseAgent)]
+        follower_value_agents = [agent for agent in iter(graph_agents) if
+                                 isinstance(agent, FollowerValueAgent)]
+        insider_agents = [agent for agent in iter(graph_agents) if
+                          isinstance(agent, InsiderValueAgent)]
+        num_noise_agents -= len(follower_noise_agents)
+        num_value_agents -= len(follower_value_agents)
+        num_value_agents -= len(insider_agents)
 
-    agent_types.extend(["FollowerNoiseAgent", "FollowerValueAgent", "InsiderValueAgent"])
-    agent_count += (len(follower_noise_agents)+len(follower_value_agents)+len(insider_agents))
+        agents.extend(follower_noise_agents)
+        agents.extend(follower_value_agents)
+        agents.extend(insider_agents)
+
+        agent_types.extend(["FollowerNoiseAgent", "FollowerValueAgent", "InsiderValueAgent"])
+        agent_count += (len(follower_noise_agents) + len(follower_value_agents) + len(insider_agents))
 
     # reszta agentów
     agents.extend(
@@ -319,5 +352,3 @@ def build_config(
         "random_state_kernel": random_state_kernel,
         "stdout_log_level": stdout_log_level,
     }
-
-
