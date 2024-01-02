@@ -87,7 +87,7 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
                 # Since we just surpassed the last megashock time, compute the next one, which we might or
                 # might not immediately consume.  This works just like the first time (in __init__()).
 
-                mst = pt + int(np.random.exponential(scale=1.0 / s["megashock_lambda_a"]))
+                mst = pt + int(s["random_state"].exponential(scale=1.0 / s["megashock_lambda_a"]))
                 msv = s["random_state"].normal(
                     loc=s["megashock_mean"], scale=sqrt(s["megashock_var"])
                 )

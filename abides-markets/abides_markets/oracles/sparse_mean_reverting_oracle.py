@@ -41,7 +41,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             mkt_open: NanosecondTime,
             mkt_close: NanosecondTime,
             # w tym słowniku symbols określamy paramety megashocku - jak często i jak intensywnie do megashocków dochodzi
-            symbols: Dict[str, Dict[str, Any]],
+            symbols: Dict[str, Dict[str, Any]]
     ) -> None:
         # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
         # inner keys: r_bar, kappa, sigma_s.
@@ -69,6 +69,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         # which the series was computed and the true fundamental value at that time.
         for symbol in symbols:
             s = symbols[symbol]
+
             logger.debug(
                 "SparseMeanRevertingOracle computing initial fundamental value for {}".format(
                     symbol
@@ -82,7 +83,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             # Compute the time and value of the first megashock.  Note that while the values are
             # mean-zero, they are intentionally bimodal (i.e. we always want to push the stock
             # some, but we will tend to cancel out via pushes in opposite directions).
-            ms_time_delta = np.random.exponential(scale=1.0 / s["megashock_lambda_a"])
+            ms_time_delta = s["random_state"].exponential(scale=1.0 / s["megashock_lambda_a"])
             mst = self.mkt_open + ms_time_delta
             msv = s["random_state"].normal(
                 loc=s["megashock_mean"], scale=sqrt(s["megashock_var"])
@@ -201,7 +202,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             # Since we just surpassed the last megashock time, compute the next one, which we might or
             # might not immediately consume.  This works just like the first time (in __init__()).
 
-            mst = pt + int(np.random.exponential(scale=1.0 / s["megashock_lambda_a"]))
+            mst = pt + int(s["random_state"].exponential(scale=1.0 / s["megashock_lambda_a"]))
             msv = s["random_state"].normal(
                 loc=s["megashock_mean"], scale=sqrt(s["megashock_var"])
             )
