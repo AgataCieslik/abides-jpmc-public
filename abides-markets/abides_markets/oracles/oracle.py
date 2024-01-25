@@ -7,4 +7,4 @@ class Oracle:
     ) -> int:
         raise NotImplementedError
 # dopisać metodę , która dla danych: progu procentowego i horyzontu czasowego zwraca sygnał buy/sell/hold (dla przyszłości,
-# na podstawie wartości fundamentalnej)
+# na podstawie wartości fundamentalnej) - nie będziemy tego robić

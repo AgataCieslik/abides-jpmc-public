@@ -11,7 +11,6 @@ from ..orders import Side
 logger = logging.getLogger(__name__)
 
 
-# do rozważenia: czy potrzebuję dorzucić contacts i delays? - chyba tak
 class ValueAgent(TradingAgent):
     def __init__(
             self,

@@ -1,6 +1,8 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple
 from ..price_level import PriceLevel
+from abides_core import NanosecondTime
+import numpy as np
 
 
 ################## STATE MANIPULATION ###############################
@@ -90,9 +92,8 @@ def ignore_buffers_decorator(func):
 
 ################# ORDERBOOK PRIMITIVES ######################
 def get_mid_price(
-    bids: List[PriceLevel], asks: List[PriceLevel], last_transaction: int
+        bids: List[PriceLevel], asks: List[PriceLevel], last_transaction: int
 ) -> int:
-
     """
     Utility that computes the mid price from the snapshot of bid and ask side
 
@@ -170,10 +171,10 @@ def get_volume(book: List[PriceLevel], depth: Optional[int] = None) -> int:
 
 
 def get_imbalance(
-    bids: List[PriceLevel],
-    asks: List[PriceLevel],
-    direction: str = "BUY",
-    depth: Optional[int] = None,
+        bids: List[PriceLevel],
+        asks: List[PriceLevel],
+        direction: str = "BUY",
+        depth: Optional[int] = None,
 ) -> float:
     """
     utility to compute the imbalance computed between the top of the book and the depth-th value of depth

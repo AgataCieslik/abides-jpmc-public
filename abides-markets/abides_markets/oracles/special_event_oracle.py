@@ -58,7 +58,7 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
             special_events = self.special_events[symbol]
             current_events = [event for event in iter(special_events) if
                               ((event['SpecialEventTime'] <= current_time) and (event['SpecialEventTime'] > pt))]
-            self.special_events_lens.append(len(current_events))
+
         else:
             current_events = None
 
@@ -68,7 +68,6 @@ class SpecialEventOracle(SparseMeanRevertingOracle):
                 # zakładam eventy posortowane według czasu
                 events_before_next_shock = [event for event in iter(current_events) if event['SpecialEventTime'] <= mst]
                 if len(events_before_next_shock) > 0:
-                    self.special_events_cond += 1
                     for event in events_before_next_shock:
                         event_time = event['SpecialEventTime']
                         event_value = event['SpecialEventValue']

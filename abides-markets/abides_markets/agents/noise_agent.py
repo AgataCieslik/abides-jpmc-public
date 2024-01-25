@@ -12,8 +12,6 @@ from ..orders import Side
 logger = logging.getLogger(__name__)
 
 
-# może tu też powinnam dopisać contacts i delays - pytanie, czy to nie zrypie później całej konfiguracji rmsc
-
 class NoiseAgent(TradingAgent):
     """
     Noise agent implement simple strategy. The agent wakes up once and places 1 order.
@@ -100,6 +98,7 @@ class NoiseAgent(TradingAgent):
 
             # Add ending cash value and subtract starting cash value.
             surplus += self.holdings["CASH"] - self.starting_cash
+            #
             surplus = float(surplus) / self.starting_cash
 
             self.logEvent("FINAL_VALUATION", surplus, True)

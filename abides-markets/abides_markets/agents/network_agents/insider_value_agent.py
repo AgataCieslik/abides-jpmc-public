@@ -36,10 +36,6 @@ class InsiderValueAgent(ValueAgent):
         # Base class init.
         super().__init__(id, name, type, random_state, symbol, starting_cash, sigma_n, r_bar, kappa, sigma_s,
                          order_size_model, lambda_a, log_orders, contacts, delays)
-
-        # The agent must track its previous observation time, so it knows how many time
-        # units have passed.
-        self.prev_obs_time: Optional[NanosecondTime] = None
         self.horizon = horizon
         self.final_fundamental: Optional[float] = None
 

@@ -278,6 +278,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         if sigma_n == 0:
             obs = r_t
         else:
+            # TODO: trzeba to poprawić tak, by nie rzucało błędem w razie podania None
             obs = int(round(random_state.normal(loc=r_t, scale=sqrt(sigma_n))))
 
         logger.debug(

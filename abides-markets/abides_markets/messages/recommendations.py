@@ -5,6 +5,7 @@ from abides_core import Message
 
 
 @dataclass
+#TODO: tą opcję trzeba wykluczyć
 class QueryFinalValue(Message):
     '''
     Message sent to alleged insider agent in order to obtain his fundamental value estimate and its variance estimate.
