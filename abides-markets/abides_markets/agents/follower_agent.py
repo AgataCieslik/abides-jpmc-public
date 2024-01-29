@@ -4,6 +4,7 @@ from abides_core import NanosecondTime
 from typing import Optional, List
 import numpy as np
 import logging
+from abides_core.message import Message
 from ..messages.recommendations import QuerySideRecommendation
 from ..messages.trading_signal import TradingSignal, BuySignal, SellSignal
 from ..messages.query import QuerySpreadResponseMsg
@@ -21,21 +22,24 @@ class FollowerAgent(NoiseAgent):
             name: Optional[str] = None,
             type: Optional[str] = None,
             random_state: Optional[np.random.RandomState] = None,
-            symbol: str = "IBM",
+            symbol: str = "ABM",
             starting_cash: int = 100000,
-            log_orders: bool = False,
+            log_orders: bool = True,
             order_size_model: Optional[OrderSizeGenerator] = None,
             wakeup_time: Optional[NanosecondTime] = None,
             contacts: Optional[List[int]] = None,
             delays: Optional[List[int]] = None,
             time_horizon: NanosecondTime = None,
             informed_agent_id: int = None,
+            order_size: Optional[int]=None
     ) -> None:
         super().__init__(id, name, type, random_state, symbol, starting_cash, log_orders, order_size_model,
                          wakeup_time, contacts, delays)
         self.time_horizon = time_horizon
         self.informed_agent_id = informed_agent_id
         self.requests_sent = 0
+        if order_size is not None:
+            self.size = order_size
         self.side = None
 
     def request_recommendation(self) -> None:
@@ -50,7 +54,7 @@ class FollowerAgent(NoiseAgent):
     # TODO: rozpisać sobie stany, czy mają sens
     def wakeup(self, current_time: NanosecondTime) -> None:
         # Parent class handles discovery of exchange times and market_open wakeup call.
-        super().wakeup(current_time)
+        TradingAgent.wakeup(self,current_time)
 
         self.state = "INACTIVE"
 
@@ -84,7 +88,7 @@ class FollowerAgent(NoiseAgent):
         if current_time > self.time_horizon:
             return
 
-        if type(self) == NoiseAgent:
+        if type(self) == FollowerAgent:
             self.request_recommendation()
             self.state = "AWAITING_SIGNAL"
         else:
@@ -94,7 +98,7 @@ class FollowerAgent(NoiseAgent):
             self, current_time: NanosecondTime, sender_id: int, message: Message
     ) -> None:
         # Parent class schedules market open wakeup call once market open/close times are known.
-        super().receive_message(current_time, sender_id, message)
+        TradingAgent.receive_message(self,current_time, sender_id, message)
 
         # We have been awakened by something other than our scheduled wakeup.
         # If our internal state indicates we were waiting for a particular event,

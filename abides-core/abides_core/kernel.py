@@ -337,6 +337,7 @@ class Kernel:
             if isinstance(message, WakeupMsg):
                 # Test to see if the agent is already in the future.  If so,
                 # delay the wakeup until the agent can act again.
+
                 if self.agent_current_times[recipient_id] > self.current_time:
                     # Push the wakeup call back into the PQ with a new time.
                     self.messages.put(
