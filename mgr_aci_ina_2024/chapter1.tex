@@ -1,0 +1,300 @@
+\chapter{Rynek jako przedmiot symulacji}
+
+Ideą modelu agentowego jest obserwacja, w jaki sposób interakcje między graczami (członkami populacji) przyczyniają się do ukształtowania pewnych konwencji i tendencji w danym środowisku \cite{MAS}. W kontekście, ogólnie rozumianego, rynku naturalnym zastosowaniem tego podejścia jest badanie, w jaki sposób indywidualne cele graczy (inwestorów) wpływają na kształtowanie się ceny obiektu handlu. By przybliżyć możliwe motywacje i decyzje graczy budowę modelu agentowego poprzedzimy sprecyzowanym opisem badanego rynku i obowiązujących na nim reguł. 
+
+Badanym przez nas obiektem jest rynek realizujący transakcje kupna i sprzedaży w oparciu o arkusz zleceń z limitem ceny (ang \textit{limit order book}; LOB), który jest aktualnie dominującym systemem obrotu w sektorze kapitałowym i walutowym \cite{gould2013limit}. W szczególności jest to system stosowany na giełdach papierów wartościowych, które traktujemy jako główny punkt odniesienia przy konstrukcji modelu. 
+
+\section{Zasady obrotu na giełdzie papierów wartościowych} 
+
+Giełda papierów wartościowych zapewnia możliwość obrotu instrumentem finansowym (akcją) w postaci ciągłej obustronnej aukcji (ang. \textit{continuous double auction}, CDA)\cite{wellmanagents}, tzn. przez cały czas trwania sesji giełdowej (aukcji) można składać równolegle oferty kupna i sprzedaży, które są realizowane na bieżąco. Narzędziem składania ofert kupna i sprzedaży na giełdzie są zlecenia\cite{gould2013limit}: 
+
+\begin{definition}\label{def:limitask}
+\textbf{Zlecenie sprzedaży} (\textit{ASK}) $x = (p_x, \omega_x, t_x)$ złożone w czasie $t_x$ jest zobowiązaniem sprzedaży $\omega_x>0$ jednostek aktywa po cenie co najmniej $p_x$.
+\end{definition}
+\begin{definition}\label{def:limitbid}
+\textbf{Zlecenie kupna} (\textit{BID}) $x = (p_x, -\omega_x, t_x)$ złożone w czasie $t_x$ jest zobowiązaniem kupna $\omega_x>0$ jednostek aktywa po cenie co najwyżej $p_x$.
+\end{definition}
+
+W momencie złożenia zlecenia giełda w pierwszej kolejności próbuje dopasować je do aktywnych (aktualnych) przeciwnych zleceń. Jeśli nie jest to możliwe, zlecenie jest umieszczane w arkuszu zleceń: 
+\begin{definition}
+\textbf{Arkuszem zleceń} $\mathcal{L}(t)$ nazywamy zbiór wszystkich aktywnych zleceń w chwili $t$.
+\end{definition}
+
+Zwyczajowo arkusz zleceń $\mathcal{L}(t)$ przedstawia się w formie dwóch kolejek priorytetowych, ze zleceniami uszeregowanymi według korzystności ceny: 
+\begin{itemize}
+\item $\mathcal{A}(t)$ - kolejki aktywnych zleceń sprzedaży, posortowanej po cenie rosnąco,
+\item $\mathcal{B}(t)$ - kolejki aktywnych zleceń kupna, posortowanej po cenie malejąco.
+\end{itemize}
+
+\begin{figure}[ht]
+\begin{center}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{|c|}{Oferty kupna (BID)} \\
+\hline
+ \rowcolor{palegreen} wolumen & cena \\
+\hline
+ \rowcolor{palegreen} 10 & 99,5 \\
+ \hline
+  \rowcolor{palegreen} 5 & 98,75 \\
+\hline
+  \rowcolor{palegreen} 5 & 98,5 \\
+\hline
+  \rowcolor{palegreen} 4 & 98 \\
+\hline
+\end{tabular}}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+ \multicolumn{2}{|c|}{Oferty sprzedaży (ASK)} \\
+\hline
+ \rowcolor{palered} wolumen & cena \\
+\hline
+ \rowcolor{palered} 8 & 100 \\
+ \hline
+  \rowcolor{palered} 6 & 100,5 \\
+\hline
+  \rowcolor{palered} 3 & 101 \\
+\hline
+  \rowcolor{palered} 2 & 110 \\
+\hline
+\end{tabular}
+}
+\end{center}
+\caption{{Przykładowy fragment arkusza zleceń}} \label{fig:orderbook_1}
+\end{figure}
+
+Arkusz zleceń jest podstawowym źródłem informacji o bieżącym stanie rynku. Przede wszystkim wyznaczamy na jego podstawie dwa kluczowe wskaźniki obserwowane przez graczy - cenę sprzedaży oraz cenę kupna:
+% tu definicje 
+\begin{definition}\label{def:askprice}
+\textbf{Cena kupna} (\textit{ask price}) w chwili $t$ to najniższa cena spośród cen aktywnych zleceń sprzedaży: 
+$$a(t) :=\min_{x\in\mathcal{A}(t)}p_x.$$
+\end{definition}
+\begin{definition}\label{def:bidprice}
+\textbf{Cena sprzedaży} (\textit{bid price})w chwili $t$ to najwyższa cena spośród cen aktywnych zleceń kupna: 
+$$b(t) := \max_{x\in \mathcal{B}(t)} p_x.$$
+\end{definition}
+
+Innymi słowy: aktualna cena kupna $a(t)$ to najlepsza cena po jakiej można zrealizować transakcję kupna w chwili $t$ (aktualnie najniższa cena, po której sprzedający są gotowi sprzedać posiadane jednostki instrumentu), analogicznie $b(t)$ to najlepsza cena po jakiej można zrealizować transakcję sprzedaży w chwili $t$. 
+% następnie wprowadzenie midprice, spreadu i depth 
+\subsection{Realizacja transakcji}\label{sec:transactions}
+% wprowadzić pojęcie order matching system i rozróżnić pro rata i time/price, opisać przykłady, opisać konsekwencje 
+Giełda dysponuje publiczną procedurą dopasowywania zleceń (ang. \textit{trade-matching algorithm}, \textit{order matching system}), która określa w jaki sposób paruje się zlecenia kupna ze zleceniami sprzedaży doprowadzając do realizacji transakcji. Najpowszechniejszymi systemami dopasowywania zleceń są dwa podejścia:
+\begin{itemize}
+\item \textit{First-in-First-out} - procedura dopasowująca nowo złożone zlecenia do istniejących w kolejności zależnej od korzystności ceny,
+\item \textit{Pro-Rata} - procedura rozbijająca kwotę nowo złożonego zlecenia proporcjonalnie między wszystkie istniejące zlecenia o cenie mieszczącej się w limicie ceny.  
+\end{itemize}
+W tej pracy rozważamy jedynie rynki korzystające ze standardowego wariantu \textit{First-in-First-out}, jego działanie w szczegółach przedstawia algorytm \ref{alg:fifo}.
+%nazywać to algorytmem czy psuedokodem?
+
+\begin{pseudokod}[H]
+\caption{\textit{First-in-First-out} Matching}\label{alg:fifo}
+
+\KwData{$x := (p_x,\omega_x, t)$}
+\eIf{$\omega_x > 0$\tcp*[r]{$x$ jest zleceniem sprzedaży}}{ 
+\vspace{0.5cm}
+\While{$(p_x \leq b(t)) \wedge (\omega_x >0)$}{
+$(b(t), \omega_b(t))\gets \mathcal{B}(t)\mathrm{.pull()}$\tcp*[r]{najlepsza oferta kupna}
+\vspace{0.5cm}
+\eIf{$\omega_x < \omega_b(t)$}{
+$\mathrm{transactionRealized}(b(t), \omega_x, t)$\;
+$\mathcal{B}(t)\mathrm{.insert}((b(t), \omega_b(t) - \omega_x))$\;
+}{
+\If{$\omega_x \geq \omega_b(t)$}{
+$\mathrm{transactionRealized}(b(t), \omega_b(t), t)$\;
+$\omega_x \gets \omega_x - \omega_b(t)$\;
+}
+}
+}
+\If{$\omega_x >0$}{
+$\mathcal{A}(t)\mathrm{.insert}((p_x, \omega_x))$ \tcp*[r]{\textit{partial fill}}
+}
+}
+{\If{$\omega_x < 0$\tcp*[r]{$x$ jest zleceniem kupna}}{
+\vspace{0.5cm}
+\While{$(p_x \geq a(t)) \wedge (\omega_x <0)$}{
+$(a(t), \omega_a(t))\gets \mathcal{A}(t)\mathrm{.pull()}$\tcp*[r]{najlepsza oferta sprzedaży}
+\vspace{0.5cm}
+\eIf{$\omega_x > \omega_a(t)$}{
+$\mathrm{transactionRealized}(a(t), \omega_x, t)$\;
+$\mathcal{A}(t)\mathrm{.insert}((a(t), \omega_a(t) - \omega_x))$\;
+}
+{\If{$\omega_x \leq \omega_a(t)$}{
+$\mathrm{transactionRealized}(a(t), \omega_a(t), t)$\;
+$\omega_x \gets \omega_x - \omega_a(t)$\;
+}
+}
+}
+\If{$\omega_x <0$}{
+$\mathcal{B}(t)\mathrm{.insert}((p_x, \omega_x))$ \tcp*[r]{\textit{partial fill}}
+}
+}
+}
+\end{pseudokod}
+Zgodnie z systemem \textit{First-in-First-out} po złożeniu zlecenia (przy założeniu, że spełnia kryteria formalne narzucone przez giełdę) w chwili $t$ możliwe są trzy scenariusze: 
+\begin{itemize}
+\item \textit{filled} - zlecenie zostało zrealizowane w całości,
+\item \textit{partial fill} - cześć zlecenia została zrealizowana (rys. \ref{orderbook_3}),
+\item \textit{unfilled} - zlecenie nie zostało zrealizowane, w całości zostało dodane do arkusza zleceń $\mathcal{L}(t)$.
+\end{itemize}
+\begin{figure}[ht]
+
+\begin{center}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{|c|}{Oferty kupna (BID)} \\
+\hline
+ \rowcolor{palegreen} wolumen & cena \\
+\hline
+ \rowcolor{palegreen} 10 & 99,5 \\
+ \hline
+  \rowcolor{palegreen} 5 & 98,75 \\
+\hline
+  \rowcolor{palegreen} 5 & 98,5 \\
+\hline
+  \rowcolor{palegreen} 4 & 98 \\
+\hline
+\end{tabular}}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+ \multicolumn{2}{|c|}{Oferty sprzedaży (ASK)} \\
+\hline
+ \rowcolor{palered} wolumen & cena \\
+\hline
+ \rowcolor{lightgrey} 8 & 100 \\
+ \hline
+  \rowcolor{palered} 6 & 100,5 \\
+\hline
+  \rowcolor{palered} 3 & 101 \\
+\hline
+  \rowcolor{palered} 2 & 110 \\
+\hline
+\end{tabular}
+}
+\vspace{0.5cm}
+\\$\big\Downarrow$
+\end{center}
+
+\begin{center}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{|c|}{Oferty kupna (BID)} \\
+\hline
+ \rowcolor{palegreen} wolumen & cena \\
+\hline
+ \rowcolor{palegreen2} 2 & 100 \\
+ \hline
+ \rowcolor{palegreen} 10 & 99,5 \\
+ \hline
+  \rowcolor{palegreen} 5 & 98,75 \\
+\hline
+  \rowcolor{palegreen} 5 & 98,5 \\
+\hline
+  \rowcolor{palegreen} 4 & 98 \\
+\hline
+\end{tabular}}
+\parbox{.3\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+ \multicolumn{2}{|c|}{Oferty sprzedaży (ASK)} \\
+\hline
+ \rowcolor{palered} wolumen & cena \\
+\hline
+  \rowcolor{palered} 6 & 100,5 \\
+\hline
+  \rowcolor{palered} 3 & 101 \\
+\hline
+  \rowcolor{palered} 2 & 110 \\
+\hline
+\end{tabular}
+}
+\end{center}
+\caption{{Realizacja zlecenia kupna 10 sztuk z limitem ceny (ceną maksymalną) wysokości 100}: kupowana jest liczba sztuk mieszcząca się w limicie ceny, reszta zlecenia dodawana jest jako nowe zlecenie oczekujące do książki zleceń.} \label{orderbook_3}
+\end{figure}
+Zauważmy, że w takich warunkach realizacji problem wyznaczenia maksymalnej ceny oferty $p_x$ i jej wielkości $\omega_x$ nie jest trywialny. Graczom może przysparzać trudności w szczególności czas realizacji zlecenia - zbyt restrykcyjna cena może sprawić, że zlecenie nie zostanie zrealizowane lub zostanie zrealizowane jedynie częściowo w planowanym czasie. Większość współczesnych giełd jako rozwiązanie tego problemu proponuje dodatkowo szczególny rodzaj zlecenia: zlecenie po każdej cenie: 
+
+\begin{definition}\label{def:marketorder}
+\textbf{Zlecenie po każdej cenie} (zlecenie typu \textit{market}) $\tilde{x} = (\omega_x, t_x)$ złożone w chwili $t_x$ to zobowiązanie sprzedaży (kupna) $\omega_x$ jednostek po aktualnie najlepszej możliwej cenie.
+\end{definition}
+
+Zlecenie po każdej cenie jest realizowane zgodnie z procedurą dopasowywania zleceń (analogicznie jak w algorytmie \ref{alg:fifo}), z tą różnicą, że nie obowiązuje limit ceny: korzystamy kolejno z istniejących ofert do momentu sprzedaży (kupna) planowanej liczby jednostek. Zlecenia po każdej cenie są traktowane przez giełdę priorytetowo: w przypadku gdy w tym samym czasie zostało złożone klasyczne zlecenie z limitem ceny i zlecenie po każdej cenie, w pierwszej kolejności wykonywane jest zlecenie po każdej cenie. Zatem zlecenie po każdej cenie gwarantuje graczowi możliwie najszybszą realizację jego oferty.
+
+\begin{figure}[ht]
+
+\begin{center}
+\parbox{.35\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{|c|}{Oferty kupna (BID)} \\
+\hline
+ \rowcolor{palegreen} wolumen & cena \\
+\hline
+ \rowcolor{lightgrey} 10 & 99,5 \\
+ \hline
+  \rowcolor{lightgrey} 5 & 98,75 \\
+\hline
+  \rowcolor{palegreen2} 5 & 98,5 \\
+\hline
+  \rowcolor{palegreen} 4 & 98 \\
+\hline
+\end{tabular} $\implies$}
+\parbox{.35\linewidth}{
+\begin{tabular}{ |l|l| }
+\hline
+\multicolumn{2}{|c|}{Oferty kupna (BID)} \\
+\hline
+ \rowcolor{palegreen} wolumen & cena \\
+\hline
+  \rowcolor{palegreen} 3 & 98,5 \\
+\hline
+  \rowcolor{palegreen} 4 & 98 \\
+\hline
+\end{tabular}}
+\end{center}
+\caption{{Realizacja zlecenia sprzedaży 17 sztuk po każdej cenie}} \label{orderbook_2}
+\end{figure}
+
+Zlecenie po każdej cenie wprawdzie niweluje ryzyko niewykonania w planowanym czasie, ale równocześnie też pozbawia gracza kontroli nad ceną zrealizowanych transakcji, dodatkowo często jest obarczone wyższą prowizją za obsługę ze strony brokera lub giełdy. Przede wszystkim zlecenia tego typu mogą być niekorzystne przy realizacji operacji sprzedaży lub kupna dużej liczby jednostek. Dobór ceny oraz wielkości zlecenia oraz ewentualny podział planowanej dużej operacji sprzedaży (kupna) na cząstkowe zlecenia pozostaje szeroko badanym problemem bez jednoznacznego rozwiązania (problem \textit{optimal order execution}). 
+% dać linka do jakiegoś papera dot. optimal order execution
+% zastanowić się, czy wspominać o informed i uninformed flow oraz market makerach 
+\section{Stylizowane fakty}
+
+Procesy decyzyjne graczy oraz ich udział w całej populacji uczestników rynku zwykle są trudne do bezpośredniego odtworzenia. W modelowaniu agentowym przyjmujemy liczne uproszczenia i założenia dotyczące przyjmowanych przez nich kryteriów decyzyjnych. Do oceny czy przyjęte założenia, algorytmy oraz proporcje agentów są dobrym przybliżeniem rzeczywistości wykorzystywane są tzw. \textit{stylizowane fakty} - zaobserwowane ogólne prawidłowości w codziennym funkcjonowaniu rynku. Stylizowane fakty są niemożliwe do udowodnienia, natomiast często mają racjonalne uzasadnienie i ze względu na powszechne występowanie na rzeczywistych rynkach przyjmowane są za cechy charakterystyczne rynku. 
+
+W tej sekcji przytoczymy wybrane stylizowane fakty dotyczące rozważanego rynku opartego na arkuszu zleceń z limitem ceny, które pozwolą nam nakreślić pełniejszy obraz funkcjonowania rynku oraz posłużą nam do uzasadnienia niektórych rozwiązań w modelu rozważanym w późniejszych rozdziałach. W pierwszej kolejności omówimy stylizowany fakt kluczowy w kontekście modelu prezentowanego w tej pracy:
+
+\begin{fact}\label{fact:events}
+\textbf{Wrażliwość na wydarzenia makroekonomiczne}: wydarzenia makroekonomiczne (np. publikacja rocznych sprawozdań z wyników firmy) wpływają bezpośrednio na cenę, powodując jej gwałtowne spadki i wzrosty \cite{eventresponse}.
+\end{fact}
+
+Fakt \ref{fact:events} jest w pełni uzasadniony w kontekście rozważanych rynków akcji - wartość udziałów jest ściśle zależna od wyceny spółki. W momencie upublicznienia pozytywnej (negatywnej) informacji pojawia się więcej kupujących (sprzedających) oczekujących wzrostu (spadku) wartości udziałów. Zależność ceny od planowanych wydarzeń (publikacji) jest obecna w konstrukcji niektórych modeli ceny (\textit{event-based price models}).
+% czy wspomnieć o uwzględnianiu tego faktu w predykcji ?
+% czy nadmienić o modelach stochastycznych?
+Kolejne interesujące nas fakty opisują zbiorczo przeciętne zachowanie uczestników rynku - intensywność ich aktywności oraz wielkość składanych przez nich zleceń: 
+\begin{fact}\label{fact:ushapeddist}
+\textbf{Aktywność graczy w czasie}: aktywność uczestników rynku jest największa na początku oraz pod koniec trwania sesji giełdowej. Wolumen (suma wielkości) zrealizowanych transakcji w jednostce czasu ma U-kształtny rozkład w czasie \cite{bouchaud_bonart_donier_gould_2018}.
+\end{fact}
+
+W opracowaniach empirycznych własności rynków z arkuszami zleceń nie podaje się jednoznacznie przyczyny powszechnego występowania rozkładów U-kształtnych lub J-kształtnych. Odnośnie wzmożonego zainteresowania na początku sesji jedną z hipotez jest reakcja uczestników rynku na wydarzenia z czasu, gdy rynek był zamknięty. W kontekście wzrostu aktywności pod koniec sesji jako potencjalną przyczynę rozważa się odkładanie przez uczestników rynku planowanych na dany dzień transakcji w oczekiwaniu na korzystniejszą cenę. 
+% czy dopisać o rozkładzie Weibulla i lognormalnym 
+\begin{fact}\label{fact:interarrivals}
+\textbf{Czas między złożeniem dwóch zleceń}: dla zleceń $x_0 = (p_{x_0}, \omega_{x_0}, t_{x_0})$ i $x_1 = (p_{x_1}, \omega_{x_1}, t_{x_1})$ różnica czasu między momentami ich złożenia $\Delta_t = t_{x_1} - t_{x_0}$ ma w przybliżeniu rozkład wykładniczy $\Delta_t \sim \mathrm{Exp(\lambda)}$, gdzie parametr $\lambda$ zależny od rynku. 
+\end{fact}
+
+W niektórych opacowaniach występują również przybliżenia rozkładu $\Delta_t$ przy pomocy rozkładu Weibulla lub rozkładu lognormalnego \cite{abergel_lob}. W tej pracy jednak korzystamy wyłącznie z przybliżenia rozkładem wykładniczym, zakładając przy tym że przypływ zleceń możemy reprezentować jako proces Poissona.
+
+\begin{fact}\label{fact:ordersize}
+\textbf{Rozkład wielkości zleceń}: wielkość zlecenia $\omega$ jest zmienną losową, ma rozkład typu \textit{power law}, tzn. $P(\omega = \omega_x) = {\omega_x}^{-(1+\mu)}$, gdzie $\mu$ może być parametrem zależnym od rynku i typu zlecenia (obserwowano większe wartości $\mu$ dla wielkości zleceń po każdej cenie)\cite{bouchaud_bonart_donier_gould_2018}.
+\end{fact}
+
+Rzadkie występowanie zleceń dużej wielkości podobnie jak większość stylizowanych faktów zwykle nie ma wskazanej jednej przyczyny. W pewnym stopniu przewaga mniejszych zleceń może być uwarunkowana ograniczonym kapitałem większości uczestników rynku. Nie bez znaczenia jest również mechanizm realizacji zleceń opisany w sekcji \ref{sec:transactions} - podział planowanej transakcji na mniejsze zlecenia może zapewniać większą kontrolę nad kosztami niż złożenie jednego zlecenia na całą założoną kwotę. 
+
+
+
+
+
+

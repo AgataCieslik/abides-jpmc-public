@@ -1,0 +1,245 @@
+% Williams Physics Thesis template
+% Patterned after the work of Cole Meisenhelder '15
+% Commented by Prof. Charlie Doret, 12/2016
+% Uploaded to Overleaf by Dr. Kevin Flaherty, 5/2021
+
+\documentclass[12pt, oneside,a4 paper,table,usenames,dvipsnames]{book} 
+\usepackage[T1]{fontenc}
+% The \usepackage{} command will import predefined fonts, symbols, environments, etc.  For example, the ams packages below come from the American Mathematical Society and include all kinds of useful math symbols like integrals
+\usepackage{amscd}
+\usepackage[polish]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{amsfonts}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}    
+\theoremstyle{definition}
+\newtheorem{definition}{Definicja}[section]
+\newtheorem{fact}{Fakt}[section]
+\DeclareMathOperator*{\argmax}{\arg\!\max}
+\DeclareMathOperator*{\argmin}{\arg\!\min}% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+\usepackage{float}
+\usepackage[pdftex]{graphicx}				% Use pdf, png, jpg, or eps� with pdflatex; use eps in DVI mode	
+\usepackage{setspace}
+\usepackage{physics}
+\usepackage{subcaption}
+\usepackage[numbers]{natbib}
+\usepackage{pdfpages}
+\usepackage{enumerate}
+\usepackage{bm}
+\linespread{1.3}
+\selectlanguage{polish}
+
+\usepackage{wrapfig}	
+\usepackage{xcolor}
+\definecolor{palegreen}{RGB}{215, 245, 186}
+\definecolor{palegreen2}{RGB}{190, 220, 160}
+\definecolor{lightgrey}{RGB}{217, 216, 215}
+\definecolor{palered}{RGB}{245, 221, 196}
+
+\usepackage[ruled,vlined,linesnumbered,longend,algochapter]{algorithm2e}
+\usepackage{algpseudocode}
+\floatname{algorithm}{Algorytm}
+% ruled	- poziome kreski na początku i końcu algorytmu, podpis na górze oddzielony również kreską poziomą
+% vlined - pionowe kreski łączące początek polecenia z jego końcem
+% linesnumbered	- numerowanie kolejnych wierszy algorytmu
+% longend - długie końcówki np. ifend, forend itd.
+% algochapter - numeracja z rozdziałami
+
+% Zamiana nazwy środowiska z domyślnej "Algorithm X" na "Pseudokod X"
+\newenvironment{pseudokod}[1][htb]{
+	\renewcommand{\algorithmcfname}{Algorytm}
+	\begin{algorithm}[#1]%
+	}{
+\end{algorithm}
+}
+
+% Zmiana rozmiaru komentarzy
+\newcommand\algcomment[1]{
+	\footnotesize{#1}
+}
+
+% Ustawienie zadanego stylu dla komentarzy
+\SetCommentSty{algcomment}
+
+% Wyśrodkowana tylda
+\usepackage{textcomp}%
+\newcommand{\textapprox}{\raisebox{0.5ex}{\texttildelow}}
+
+% Listowanie kodów źródłowych
+\usepackage{listings} 
+\renewcommand{\lstlistingname}{Kod źródłowy} % Polska nazwa listingu
+
+% Definicje pecjalnych znaków, które nie są obsługiwane w środowisku listing
+\lstset{literate=
+	{ż}{{\.{z}}}1	{ź}{{\'{z}}}1
+	{ć}{{\'{c}}}1	{ń}{{\'{n}}}1
+	{ą}{{\c a}}1	{ś}{{\'{s}}}1
+	{ł}{{\l}}1		{ę}{{\c{e}}}1
+	{ó}{{\'{o}}}1	{á}{{\'a}}1
+	{é}{{\'e}}1		{í}{{\'i}}1
+	{ó}{{\'o}}1		{ú}{{\'u}}1
+	{ù}{{\`u}}1		{Á}{{\'A}}1
+	{É}{{\'E}}1		{Í}{{\'I}}1
+	{Ó}{{\'O}}1		{Ú}{{\'U}}1
+	{à}{{\`a}}1		{è}{{\'e}}1
+	{ì}{{\`i}}1		{ò}{{\`o}}1
+	{ò}{{\`o}}1		{À}{{\`A}}1
+	{È}{{\'E}}1		{Ì}{{\`I}}1
+	{Ò}{{\`O}}1		{Ò}{{\`O}}1
+	{ä}{{\"a}}1		{ë}{{\"e}}1
+	{ï}{{\"i}}1		{ö}{{\"o}}1
+	{ü}{{\"u}}1		{Ä}{{\"A}}1
+	{Ë}{{\"E}}1		{Ï}{{\"I}}1
+	{Ö}{{\"O}}1		{Ü}{{\"U}}1
+	{â}{{\^a}}1		{ê}{{\^e}}1
+	{î}{{\^i}}1		{ô}{{\^o}}1
+	{û}{{\^u}}1		{Â}{{\^A}}1
+	{Ê}{{\^E}}1		{Î}{{\^I}}1
+	{Ô}{{\^O}}1		{Û}{{\^U}}1
+	{œ}{{\oe}}1		{Œ}{{\OE}}1
+	{æ}{{\ae}}1		{Æ}{{\AE}}1
+	{ß}{{\ss}}1		{ç}{{\c c}}1
+	{Ç}{{\c C}}1	{ø}{{\o}}1
+	{å}{{\r a}}1	{Å}{{\r A}}1
+	{€}{{\EUR}}1	{£}{{\pounds}}1
+}
+
+
+% enables the use of \wrapfig, for figures with text wrapped around them
+%\usepackage{lipsum}			% gives access to \lipsum, which dumps some latin text into your document as filler if you want to check formatting
+
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+         
+
+\begin{document}
+
+\thispagestyle{empty}%
+
+\newgeometry{left=2cm, right=2cm, top=2cm, bottom=2cm}
+\begin{center}
+\textbf{\LARGE Politechnika Wrocławska}
+\\
+\vspace{.2cm}\textbf{\Large Wydział Informatyki i Telekomunikacji}
+		\vspace{-.3cm}\rule{\textwidth}{.1pt}
+	\end{center}
+ \vspace{.3cm}
+	\begin{flushleft}
+		\begin{minipage}[t]{\textwidth/2}
+			\begin{tabular}{ l l }
+				Kierunek: & \textbf{Informatyka Algorytmiczna (INA)} 
+			\end{tabular}
+		\end{minipage}
+	\end{flushleft}
+	
+	\vspace{2cm}
+	\begin{center}
+		{\Huge
+					\MakeUppercase{Praca dyplomowa}
+					
+					\vspace{.4em}\MakeUppercase{{magisterska}}%
+      			
+		\vspace{2cm plus .3fill}}
+
+        {\huge \textbf{Zastosowanie modelowania agentowego do symulacji rynku}}\\
+		
+		\vspace{1.5cm}{\huge Agata Cieślik}
+		
+		\vspace{3cm}{\large Opiekun pracy}
+		
+		\vspace{.2cm}{\large\bfseries dr inż. Jakub Lemiesz}
+
+	
+	\end{center}
+	\vspace{2.5cm}
+	
+	\begin{flushleft}
+		\normalsize słowa kluczowe: modelowanie agentowe
+	\end{flushleft}
+	
+	\begin{center}   
+		\rule{\textwidth}{.2pt}
+		
+		\vspace{-.2cm}\large \MakeUppercase{Wrocław} \the\year
+	\end{center}
+\restoregeometry
+\newpage
+\setcounter{page}{2}
+
+
+% Here we set the page dimensions to match the standard thesis format.  These values should not be changed.
+%%% SET LENTGH AND WIDTH %%%
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8.5in}
+\setlength{\oddsidemargin}{0pt}
+\setlength{\evensidemargin}{0pt}
+\setlength{\topmargin}{0pt}
+\setlength{\marginparsep}{0pt}
+\setlength{\marginparwidth}{1in}
+
+
+%\begin{document} starts LaTeX looking for actual content.  Everything above this point is purely formatting.
+\input{introduction}
+
+\tableofcontents
+
+
+\input{chapter1}
+\input{chapter2}
+\input{chapter3}
+\input{chapter4}
+\input{chapter5}
+\input{ending}
+
+ 
+
+
+
+
+% \frontmatter defines the pieces of the thesis which will use roman numerals for page numbering
+
+
+
+% \chapter{} and/or \chapter*{} will create a chapter in your thesis.  Including the asterisk will cause the chapter to not appear in the table of contents.
+
+% \input will reference a particular .tex file.  Here we are grabbing a file entitled Abstract stored in the 
+
+\newpage
+\bibliographystyle{plain}
+\bibliography{bibliography}
+ % Entries are in the refs.bib file
+
+%\input{Chapters/Chapter1}
+
+%\chapter{A second chapter}
+%\input{Chapters/Chapter2}
+
+
+% the \appendix tag tells LaTeX where it should start labeling chapters with letters (denoting appendices) rather than numbers (denoting main chapters)
+%\appendix 
+%%% przepisać
+%\chapter{Obrazy}
+
+%\begin{appendices}
+
+%\chapter{Kod}
+
+
+%\end{appendices}
+%\input{Chapters/Appendix}
+%\chapter{Programy}
+% wzmianka o repozytorium -> zmienić sobie nick
+
+% \bibliographystyle tells LaTeX how you want to format your bibliography.  There are many standard formats.  apsrev is fairly typical, but feel free to explore other options if the mood strikes.  
+
+
+% \bibliography calls the actual file that contains your bibliographic information.  This file can be generated by hand or in an automated way using software such as BibTeX.  Either works fine, but it is worth learning to use BibTex in the long term.  Take a look at the .bib file included here if you want to get some idea of the formatting required to create a bibliogrphy file of your own.
+
+
+\end{document}
