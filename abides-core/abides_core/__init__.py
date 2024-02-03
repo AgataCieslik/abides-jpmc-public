@@ -2,6 +2,7 @@
 NanosecondTime = int
 
 from .agent import Agent
+from .communicative_agent import CommunicativeAgent
 from .kernel import Kernel
 from .latency_model import LatencyModel
 from .message import Message, MessageBatch

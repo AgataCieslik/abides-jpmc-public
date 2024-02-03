@@ -1,37 +1,37 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
 
+from .trading_agent import TradingAgent
 from ..messages.query import QuerySpreadResponseMsg
 from ..orders import Side
-from .trading_agent import TradingAgent
-
 
 logger = logging.getLogger(__name__)
 
 
 class ValueAgent(TradingAgent):
     def __init__(
-        self,
-        id: int,
-        name: Optional[str] = None,
-        type: Optional[str] = None,
-        random_state: Optional[np.random.RandomState] = None,
-        symbol: str = "IBM",
-        starting_cash: int = 100_000,
-        sigma_n: float = 10_000,
-        r_bar: int = 100_000,
-        kappa: float = 0.05,
-        sigma_s: float = 100_000,
-        order_size_model=None,
-        lambda_a: float = 0.005,
-        log_orders: float = False,
+            self,
+            id: int,
+            name: Optional[str] = None,
+            type: Optional[str] = None,
+            random_state: Optional[np.random.RandomState] = None,
+            symbol: str = "IBM",
+            starting_cash: int = 100_000,
+            sigma_n: float = 10_000,
+            r_bar: int = 100_000,
+            kappa: float = 0.05,
+            sigma_s: float = 100_000,
+            order_size_model=None,
+            lambda_a: float = 0.005,
+            log_orders: float = False,
+            contacts: Optional[List[int]] = None,
+            delays: Optional[List[int]] = None
     ) -> None:
         # Base class init.
-        super().__init__(id, name, type, random_state, starting_cash, log_orders)
+        super().__init__(id, name, type, random_state, starting_cash, log_orders, contacts, delays)
 
         # Store important parameters particular to the ZI agent.
         self.symbol: str = symbol  # symbol to trade
@@ -66,6 +66,16 @@ class ValueAgent(TradingAgent):
         self.order_size_model = order_size_model  # Probabilistic model for order size
 
         self.depth_spread: int = 2
+        self.side: Optional[Side] = None
+
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.trading = False
+        self.state = "AWAITING_WAKEUP"
+        self.r_t = self.r_bar
+        self.sigma_t = 0
+        self.prev_wake_time = None
+        self.side = None
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         # self.kernel is set in Agent.kernel_initializing()
@@ -143,7 +153,7 @@ class ValueAgent(TradingAgent):
 
         self.cancel_all_orders()
 
-        if type(self) == ValueAgent:
+        if isinstance(self, ValueAgent):
             self.get_current_spread(self.symbol)
             self.state = "AWAITING_SPREAD"
         else:
@@ -186,8 +196,8 @@ class ValueAgent(TradingAgent):
         # Update sigma estimate for time advancement.
         sigma_tprime = ((1 - self.kappa) ** (2 * delta)) * self.sigma_t
         sigma_tprime += (
-            (1 - (1 - self.kappa) ** (2 * delta)) / (1 - (1 - self.kappa) ** 2)
-        ) * self.sigma_s
+                                (1 - (1 - self.kappa) ** (2 * delta)) / (1 - (1 - self.kappa) ** 2)
+                        ) * self.sigma_s
 
         # Apply the new observation, with "confidence" in the observation inversely proportional
         # to the observation noise, and "confidence" in the previous estimate inversely proportional
@@ -195,7 +205,7 @@ class ValueAgent(TradingAgent):
         self.r_t = (self.sigma_n / (self.sigma_n + sigma_tprime)) * r_tprime
         self.r_t += (sigma_tprime / (self.sigma_n + sigma_tprime)) * obs_t
 
-        self.sigma_t = (self.sigma_n * self.sigma_t) / (self.sigma_n + self.sigma_t)
+        self.sigma_t = (self.sigma_n * sigma_tprime) / (self.sigma_n + sigma_tprime)
 
         # Now having a best estimate of the fundamental at time t, we can make our best estimate
         # of the final fundamental (for time T) as of current time t.  Delta is now the number
@@ -248,13 +258,13 @@ class ValueAgent(TradingAgent):
                 # fundamental belief that price will go down, place a sell order
                 buy = False
                 p = (
-                    bid + adjust_int
+                        bid + adjust_int
                 )  # submit a market order to sell, limit order inside the spread or deeper in the book
             elif r_T >= mid:
                 # fundamental belief that price will go up, buy order
                 buy = True
                 p = (
-                    ask - adjust_int
+                        ask - adjust_int
                 )  # submit a market order to buy, a limit order inside the spread or deeper in the book
         else:
             # initialize randomly
@@ -266,12 +276,13 @@ class ValueAgent(TradingAgent):
             self.size = self.order_size_model.sample(random_state=self.random_state)
 
         side = Side.BID if buy == 1 else Side.ASK
+        self.side = side
 
         if self.size > 0:
             self.place_limit_order(self.symbol, self.size, side, p)
 
     def receive_message(
-        self, current_time: NanosecondTime, sender_id: int, message: Message
+            self, current_time: NanosecondTime, sender_id: int, message: Message
     ) -> None:
         # Parent class schedules market open wakeup call once market open/close times are known.
         super().receive_message(current_time, sender_id, message)

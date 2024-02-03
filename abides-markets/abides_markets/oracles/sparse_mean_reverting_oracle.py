@@ -1,7 +1,7 @@
 import datetime as dt
 import logging
 from math import exp, sqrt
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,6 @@ import pandas as pd
 from abides_core import NanosecondTime
 
 from .mean_reverting_oracle import MeanRevertingOracle
-
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +37,11 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
     """
 
     def __init__(
-        self,
-        mkt_open: NanosecondTime,
-        mkt_close: NanosecondTime,
-        symbols: Dict[str, Dict[str, Any]],
+            self,
+            mkt_open: NanosecondTime,
+            mkt_close: NanosecondTime,
+            # w tym słowniku symbols określamy paramety megashocku - jak często i jak intensywnie do megashocków dochodzi
+            symbols: Dict[str, Dict[str, Any]]
     ) -> None:
         # Symbols must be a dictionary of dictionaries with outer keys as symbol names and
         # inner keys: r_bar, kappa, sigma_s.
@@ -69,6 +69,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         # which the series was computed and the true fundamental value at that time.
         for symbol in symbols:
             s = symbols[symbol]
+
             logger.debug(
                 "SparseMeanRevertingOracle computing initial fundamental value for {}".format(
                     symbol
@@ -82,7 +83,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             # Compute the time and value of the first megashock.  Note that while the values are
             # mean-zero, they are intentionally bimodal (i.e. we always want to push the stock
             # some, but we will tend to cancel out via pushes in opposite directions).
-            ms_time_delta = np.random.exponential(scale=1.0 / s["megashock_lambda_a"])
+            ms_time_delta = s["random_state"].exponential(scale=1.0 / s["megashock_lambda_a"])
             mst = self.mkt_open + ms_time_delta
             msv = s["random_state"].normal(
                 loc=s["megashock_mean"], scale=sqrt(s["megashock_var"])
@@ -101,7 +102,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         )
 
     def compute_fundamental_at_timestamp(
-        self, ts: NanosecondTime, v_adj, symbol: str, pt: NanosecondTime, pv
+            self, ts: NanosecondTime, v_adj, symbol: str, pt: NanosecondTime, pv
     ) -> int:
         """
         Arguments:
@@ -137,7 +138,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         # from the appropriate distribution of possible values.
         v = s["random_state"].normal(
             loc=mu + (pv - mu) * (exp(-gamma * d)),
-            scale=sqrt(((theta**2) / (2 * gamma)) * (1 - exp(-2 * gamma * d))),
+            scale=sqrt(((theta ** 2) / (2 * gamma)) * (1 - exp(-2 * gamma * d))),
         )
 
         # Apply the value adjustment that was passed in.
@@ -159,7 +160,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return v
 
     def advance_fundamental_value_series(
-        self, current_time: NanosecondTime, symbol: str
+            self, current_time: NanosecondTime, symbol: str
     ) -> int:
         """This method advances the fundamental value series for a single stock symbol,
         using the OU process.  It may proceed in several steps due to our periodic
@@ -201,7 +202,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
             # Since we just surpassed the last megashock time, compute the next one, which we might or
             # might not immediately consume.  This works just like the first time (in __init__()).
 
-            mst = pt + int(np.random.exponential(scale=1.0 / s["megashock_lambda_a"]))
+            mst = pt + int(s["random_state"].exponential(scale=1.0 / s["megashock_lambda_a"]))
             msv = s["random_state"].normal(
                 loc=s["megashock_mean"], scale=sqrt(s["megashock_var"])
             )
@@ -221,7 +222,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return v
 
     def get_daily_open_price(
-        self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
+            self, symbol: str, mkt_open: NanosecondTime, cents: bool = True
     ) -> int:
         """Return the daily open price for the symbol given.
 
@@ -246,11 +247,11 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         return open_price
 
     def observe_price(
-        self,
-        symbol: str,
-        current_time: NanosecondTime,
-        random_state: np.random.RandomState,
-        sigma_n: int = 1000,
+            self,
+            symbol: str,
+            current_time: NanosecondTime,
+            random_state: Optional[np.random.RandomState] = None,
+            sigma_n: int = 1000
     ) -> int:
         """Return a noisy observation of the current fundamental value.
 
@@ -277,6 +278,7 @@ class SparseMeanRevertingOracle(MeanRevertingOracle):
         if sigma_n == 0:
             obs = r_t
         else:
+            # TODO: trzeba to poprawić tak, by nie rzucało błędem w razie podania None
             obs = int(round(random_state.normal(loc=r_t, scale=sqrt(sigma_n))))
 
         logger.debug(

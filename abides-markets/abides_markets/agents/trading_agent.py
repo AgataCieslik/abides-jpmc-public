@@ -5,10 +5,11 @@ from copy import deepcopy
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
 from abides_core.utils import fmt_ts
 
+from .exchange_agent import ExchangeAgent
+from .financial_agent import FinancialAgent
 from ..messages.market import (
     MarketClosePriceRequestMsg,
     MarketClosePriceMsg,
@@ -44,9 +45,6 @@ from ..messages.query import (
     QueryTransactedVolResponseMsg,
 )
 from ..orders import Order, LimitOrder, MarketOrder, Side
-from .financial_agent import FinancialAgent
-from .exchange_agent import ExchangeAgent
-
 
 logger = logging.getLogger(__name__)
 
@@ -63,16 +61,18 @@ class TradingAgent(FinancialAgent):
     """
 
     def __init__(
-        self,
-        id: int,
-        name: Optional[str] = None,
-        type: Optional[str] = None,
-        random_state: Optional[np.random.RandomState] = None,
-        starting_cash: int = 100000,
-        log_orders: bool = False,
+            self,
+            id: int,
+            name: Optional[str] = None,
+            type: Optional[str] = None,
+            random_state: Optional[np.random.RandomState] = None,
+            starting_cash: int = 100000,
+            log_orders: bool = False,
+            contacts: Optional[List[int]] = None,
+            delays: Optional[List[int]] = None
     ) -> None:
         # Base class init.
-        super().__init__(id, name, type, random_state)
+        super().__init__(id, name, type, random_state, contacts, delays)
 
         # We don't yet know when the exchange opens or closes.
         self.mkt_open: Optional[NanosecondTime] = None
@@ -149,6 +149,24 @@ class TradingAgent(FinancialAgent):
         self.mkt_closed: bool = False
 
     # Simulation lifecycle messages.
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        self.mkt_open = None
+        self.mkt_close = None
+        self.holdings = {"CASH": self.starting_cash}
+        self.orders = {}
+        self.last_trade = {}
+        self.exchange_ts = {}
+        self.daily_close_price = {}
+        self.nav_diff = 0
+        self.basket_size = 0
+        self.known_bids = {}
+        self.known_asks = {}
+        self.stream_history = {}
+        self.transacted_volume = {}
+        self.executed_orders = []
+        self.first_wake = True
+        self.mkt_closed = False
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         """
@@ -236,7 +254,7 @@ class TradingAgent(FinancialAgent):
         return (self.mkt_open and self.mkt_close) and not self.mkt_closed
 
     def request_data_subscription(
-        self, subscription_message: MarketDataSubReqMsg
+            self, subscription_message: MarketDataSubReqMsg
     ) -> None:
         """
         Used by any Trading Agent subclass to create a subscription to market data from
@@ -251,7 +269,7 @@ class TradingAgent(FinancialAgent):
         self.send_message(recipient_id=self.exchange_id, message=subscription_message)
 
     def cancel_data_subscription(
-        self, subscription_message: MarketDataSubReqMsg
+            self, subscription_message: MarketDataSubReqMsg
     ) -> None:
         """
         Used by any Trading Agent subclass to cancel subscription to market data from
@@ -266,7 +284,7 @@ class TradingAgent(FinancialAgent):
         self.send_message(recipient_id=self.exchange_id, message=subscription_message)
 
     def receive_message(
-        self, current_time: NanosecondTime, sender_id: int, message: Message
+            self, current_time: NanosecondTime, sender_id: int, message: Message
     ) -> None:
         """
         Arguments:
@@ -414,7 +432,7 @@ class TradingAgent(FinancialAgent):
         self.send_message(self.exchange_id, QueryOrderStreamMsg(symbol, length))
 
     def get_transacted_volume(
-        self, symbol: str, lookback_period: str = "10min"
+            self, symbol: str, lookback_period: str = "10min"
     ) -> None:
         """
         Used by any trading agent subclass to query the total transacted volume in a
@@ -430,18 +448,18 @@ class TradingAgent(FinancialAgent):
         )
 
     def create_limit_order(
-        self,
-        symbol: str,
-        quantity: int,
-        side: Side,
-        limit_price: int,
-        order_id: Optional[int] = None,
-        is_hidden: bool = False,
-        is_price_to_comply: bool = False,
-        insert_by_id: bool = False,
-        is_post_only: bool = False,
-        ignore_risk: bool = True,
-        tag: Any = None,
+            self,
+            symbol: str,
+            quantity: int,
+            side: Side,
+            limit_price: int,
+            order_id: Optional[int] = None,
+            is_hidden: bool = False,
+            is_price_to_comply: bool = False,
+            insert_by_id: bool = False,
+            is_post_only: bool = False,
+            ignore_risk: bool = True,
+            tag: Any = None,
     ) -> LimitOrder:
         """
         Used by any Trading Agent subclass to create a limit order.
@@ -507,18 +525,18 @@ class TradingAgent(FinancialAgent):
             warnings.warn(f"TradingAgent ignored limit order of quantity zero: {order}")
 
     def place_limit_order(
-        self,
-        symbol: str,
-        quantity: int,
-        side: Side,
-        limit_price: int,
-        order_id: Optional[int] = None,
-        is_hidden: bool = False,
-        is_price_to_comply: bool = False,
-        insert_by_id: bool = False,
-        is_post_only: bool = False,
-        ignore_risk: bool = True,
-        tag: Any = None,
+            self,
+            symbol: str,
+            quantity: int,
+            side: Side,
+            limit_price: int,
+            order_id: Optional[int] = None,
+            is_hidden: bool = False,
+            is_price_to_comply: bool = False,
+            insert_by_id: bool = False,
+            is_post_only: bool = False,
+            ignore_risk: bool = True,
+            tag: Any = None,
     ) -> None:
         """
         Used by any Trading Agent subclass to place a limit order.
@@ -560,13 +578,13 @@ class TradingAgent(FinancialAgent):
                 self.logEvent("ORDER_SUBMITTED", order.to_dict(), deepcopy_event=False)
 
     def place_market_order(
-        self,
-        symbol: str,
-        quantity: int,
-        side: Side,
-        order_id: Optional[int] = None,
-        ignore_risk: bool = True,
-        tag: Any = None,
+            self,
+            symbol: str,
+            quantity: int,
+            side: Side,
+            order_id: Optional[int] = None,
+            ignore_risk: bool = True,
+            tag: Any = None,
     ) -> None:
         """
         Used by any Trading Agent subclass to place a market order.
@@ -619,7 +637,7 @@ class TradingAgent(FinancialAgent):
             )
 
     def place_multiple_orders(
-        self, orders: List[Union[LimitOrder, MarketOrder]]
+            self, orders: List[Union[LimitOrder, MarketOrder]]
     ) -> None:
         """
         Used by any Trading Agent subclass to place multiple orders at the same time.
@@ -653,7 +671,7 @@ class TradingAgent(FinancialAgent):
             self.send_message_batch(self.exchange_id, messages)
 
     def cancel_order(
-        self, order: LimitOrder, tag: Optional[str] = None, metadata: dict = {}
+            self, order: LimitOrder, tag: Optional[str] = None, metadata: dict = {}
     ) -> None:
         """
         Used by derived classes of TradingAgent to cancel a limit order.
@@ -683,11 +701,11 @@ class TradingAgent(FinancialAgent):
                 self.cancel_order(order)
 
     def partial_cancel_order(
-        self,
-        order: LimitOrder,
-        quantity: int,
-        tag: Optional[str] = None,
-        metadata: dict = {},
+            self,
+            order: LimitOrder,
+            quantity: int,
+            tag: Optional[str] = None,
+            metadata: dict = {},
     ) -> None:
         """
         Used by any Trading Agent subclass to modify any existing limit order.
@@ -968,12 +986,12 @@ class TradingAgent(FinancialAgent):
             )
 
     def query_spread(
-        self,
-        symbol: str,
-        price: int,
-        bids: List[List[Tuple[int, int]]],
-        asks: List[List[Tuple[int, int]]],
-        book: str,
+            self,
+            symbol: str,
+            price: int,
+            bids: List[List[Tuple[int, int]]],
+            asks: List[List[Tuple[int, int]]],
+            book: str,
     ) -> None:
         """
         Handles QuerySpreadResponseMsg messages from an exchange agent.
@@ -1048,7 +1066,7 @@ class TradingAgent(FinancialAgent):
         self.stream_history[symbol] = orders
 
     def query_transacted_volume(
-        self, symbol: str, bid_volume: int, ask_volume: int
+            self, symbol: str, bid_volume: int, ask_volume: int
     ) -> None:
         """
         Handles the QueryTransactedVolResponseMsg messages from the exchange agent.
@@ -1137,7 +1155,7 @@ class TradingAgent(FinancialAgent):
         return liq
 
     def mark_to_market(
-        self, holdings: Mapping[str, int], use_midpoint: bool = False
+            self, holdings: Mapping[str, int], use_midpoint: bool = False
     ) -> int:
         """
         Marks holdings to market (including cash).
@@ -1188,7 +1206,7 @@ class TradingAgent(FinancialAgent):
         return self.holdings[symbol] if symbol in self.holdings else 0
 
     def get_known_bid_ask_midpoint(
-        self, symbol: str
+            self, symbol: str
     ) -> Tuple[Optional[int], Optional[int], Optional[int]]:
         """
         Get the known best bid, ask, and bid/ask midpoint from cached data. No volume.

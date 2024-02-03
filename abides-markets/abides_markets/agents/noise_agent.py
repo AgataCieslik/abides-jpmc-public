@@ -1,15 +1,13 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
-
 from abides_core import Message, NanosecondTime
 
+from .trading_agent import TradingAgent
 from ..generators import OrderSizeGenerator
 from ..messages.query import QuerySpreadResponseMsg
 from ..orders import Side
-from .trading_agent import TradingAgent
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +18,22 @@ class NoiseAgent(TradingAgent):
     """
 
     def __init__(
-        self,
-        id: int,
-        name: Optional[str] = None,
-        type: Optional[str] = None,
-        random_state: Optional[np.random.RandomState] = None,
-        symbol: str = "IBM",
-        starting_cash: int = 100000,
-        log_orders: bool = False,
-        order_size_model: Optional[OrderSizeGenerator] = None,
-        wakeup_time: Optional[NanosecondTime] = None,
+            self,
+            id: int,
+            name: Optional[str] = None,
+            type: Optional[str] = None,
+            random_state: Optional[np.random.RandomState] = None,
+            symbol: str = "IBM",
+            starting_cash: int = 100000,
+            log_orders: bool = False,
+            order_size_model: Optional[OrderSizeGenerator] = None,
+            wakeup_time: Optional[NanosecondTime] = None,
+            contacts: Optional[List[int]] = None,
+            delays: Optional[List[int]] = None
     ) -> None:
 
         # Base class init.
-        super().__init__(id, name, type, random_state, starting_cash, log_orders)
+        super().__init__(id, name, type, random_state, starting_cash, log_orders, contacts, delays)
 
         self.wakeup_time: NanosecondTime = wakeup_time
 
@@ -56,6 +56,13 @@ class NoiseAgent(TradingAgent):
         )
 
         self.order_size_model = order_size_model  # Probabilistic model for order size
+
+    def reset_properties(self) -> None:
+        super().reset_properties()
+        # czy powinnam resetować czas przebudzenia?
+        self.trading = False
+        self.state = "AWAITING_WAKEUP"
+        self.prev_wake_time = None
 
     def kernel_starting(self, start_time: NanosecondTime) -> None:
         # self.kernel is set in Agent.kernel_initializing()
@@ -91,6 +98,7 @@ class NoiseAgent(TradingAgent):
 
             # Add ending cash value and subtract starting cash value.
             surplus += self.holdings["CASH"] - self.starting_cash
+            #
             surplus = float(surplus) / self.starting_cash
 
             self.logEvent("FINAL_VALUATION", surplus, True)
@@ -160,7 +168,7 @@ class NoiseAgent(TradingAgent):
                 self.place_limit_order(self.symbol, self.size, Side.ASK, bid)
 
     def receive_message(
-        self, current_time: NanosecondTime, sender_id: int, message: Message
+            self, current_time: NanosecondTime, sender_id: int, message: Message
     ) -> None:
         # Parent class schedules market open wakeup call once market open/close times are known.
         super().receive_message(current_time, sender_id, message)

@@ -14,6 +14,11 @@ import itertools
 def get_path(level):
     path = pathlib.Path(__file__).parent.absolute()
     path = str(path)
+
+    # TODO: czy da się to zrobić tą poprawkę bardziej elegancko - może odwołując się do systemu
+    if "/" not in path:
+        path = path.replace("\\", "/")
+
     if level == 0:
         return path
     else:
@@ -60,10 +65,10 @@ def run_test(test_):
         pass_logdir_sha=(
             "--log_dir",
             lambda x: root_path_ec2
-            + f"/tmp/{old_new_flag}_{stamp}/"
-            + x
-            + "/"
-            + specific_path,
+                      + f"/tmp/{old_new_flag}_{stamp}/"
+                      + x
+                      + "/"
+                      + specific_path,
         ),
     )
 
@@ -79,8 +84,8 @@ def run_test(test_):
     ## compare order book logs from the simulations
     if parameters["with_log"]:
         path_to_ob = (
-            root_path_ec2
-            + f"/tmp/{old_new_flag}_{stamp}/{parameters[old_new_flag]['sha']}/{specific_path}/ORDERBOOK_ABM_FULL.bz2"
+                root_path_ec2
+                + f"/tmp/{old_new_flag}_{stamp}/{parameters[old_new_flag]['sha']}/{specific_path}/ORDERBOOK_ABM_FULL.bz2"
         )
     else:
         path_to_ob = "no_log"
@@ -100,7 +105,6 @@ def compute_ob(path_old, path_new):
 
 
 def run_tests(LIST_PARAMETERS, varying_parameters):
-
     old_new_flags = ["old", "new"]
     tests = list(itertools.product(LIST_PARAMETERS, old_new_flags))
 

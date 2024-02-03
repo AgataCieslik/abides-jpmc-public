@@ -2,12 +2,12 @@ from typing import List, Optional, Union
 
 import numpy as np
 
-from abides_core import Agent
+from abides_core import Agent, CommunicativeAgent
 
 from ..utils import dollarize
 
 
-class FinancialAgent(Agent):
+class FinancialAgent(CommunicativeAgent):
     """
     The FinancialAgent class contains attributes and methods that should be available to
     all agent types (traders, exchanges, etc) in a financial market simulation.
@@ -19,14 +19,16 @@ class FinancialAgent(Agent):
     """
 
     def __init__(
-        self,
-        id: int,
-        name: Optional[str] = None,
-        type: Optional[str] = None,
-        random_state: Optional[np.random.RandomState] = None,
+            self,
+            id: int,
+            name: Optional[str] = None,
+            type: Optional[str] = None,
+            random_state: Optional[np.random.RandomState] = None,
+            contacts: Optional[List[int]] = None,
+            delays: Optional[List[int]] = None
     ) -> None:
         # Base class init.
-        super().__init__(id, name, type, random_state)
+        super().__init__(id, name, type, random_state, contacts=contacts, delays=delays)
 
     def dollarize(self, cents: Union[List[int], int]) -> Union[List[str], str]:
         """
