@@ -36,6 +36,6 @@ for k in range(num_of_replications):
                 data = {"prices": prices, "volume": volume, "informer_actions": informer_actions, "holdings": holdings,
                         "surplus": surplus}
                 pickle.dump(data, open(f"../../results/data_informer_{max_qts[i]}_{order_sizes[i][j]}_rep_{k}.pkl", "wb"))
-                print(f"Suceeded: ({max_qts[i]}, {order_sizes[i][j]}), rep. {k}")
+                print(f"Succeeded: ({max_qts[i]}, {order_sizes[i][j]}), rep. {k}")
             except Exception as e:
                 print(f"Failed: ({max_qts[i]}, {order_sizes[i][j]}), rep. {k}; error: {e}")

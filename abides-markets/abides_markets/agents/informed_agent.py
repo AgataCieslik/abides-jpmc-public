@@ -110,7 +110,6 @@ class InformedAgent(ValueAgent):
 
         self.last_pred = None
 
-        # TODO: zastanowić się, czy nie zastąpić tego metodą get_next_wakeup
 
     def get_holdings(self, symbol):
         if (self.symbol in self.holdings.keys()):
@@ -289,7 +288,6 @@ class InformedAgent(ValueAgent):
             self.state = "AWAITING_SPREAD"
             return
 
-        # TODO: czy to zachowanie jest dla tego agenta pożądane?
         self.cancel_all_orders()
 
         if isinstance(self, InformedAgent):
