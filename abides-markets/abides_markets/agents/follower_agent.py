@@ -13,7 +13,6 @@ from ..orders import Side
 
 logger = logging.getLogger(__name__)
 
-#TODO: rozpisać sensownie stany dla agentów Follower i Informed
 
 class FollowerAgent(NoiseAgent):
     def __init__(
@@ -51,7 +50,6 @@ class FollowerAgent(NoiseAgent):
             self.broadcast(message=message)
             self.requests_sent += len(self.contacts)
 
-    # TODO: rozpisać sobie stany, czy mają sens
     def wakeup(self, current_time: NanosecondTime) -> None:
         # Parent class handles discovery of exchange times and market_open wakeup call.
         TradingAgent.wakeup(self,current_time)

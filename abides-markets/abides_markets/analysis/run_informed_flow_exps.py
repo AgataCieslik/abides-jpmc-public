@@ -41,6 +41,6 @@ for k in range(num_of_replications):
                             "surplus": surplus}
                     pickle.dump(data,
                                 open(f"../../results/informed_flow/data_informed_flow_{max_qts[i]}_{order_sizes[i][j]}_{followers_num[f]}_rep_{k}.pkl", "wb"))
-                    print(f"Suceeded: ({max_qts[i]}, {order_sizes[i][j]}, {followers_num[f]}), rep. {k}")
+                    print(f"Succeeded: ({max_qts[i]}, {order_sizes[i][j]}, {followers_num[f]}), rep. {k}")
                 except Exception as e:
                     print(f"Failed: ({max_qts[i]}, {order_sizes[i][j]}, {followers_num[f]}), rep. {k}; error: {e}")
